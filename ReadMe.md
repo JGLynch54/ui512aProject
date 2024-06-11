@@ -114,7 +114,7 @@ extern "C"
 	// returns: (0) for equal, -1 for less than, 1 for greater than (logical, unsigned compare)
 	s32 compare_uT64 ( u64*, u64 );
 
-	// void add_u ( u64* sum, u64* addend1, u64* addend2 );
+	// s32 add_u ( u64* sum, u64* addend1, u64* addend2 );
 	// add supplied 512bit (8 QWORDS) sources to supplied destination
 	// returns: zero for no carry, 1 for carry (overflow)
 	s32 add_u ( u64*, u64*, u64* );

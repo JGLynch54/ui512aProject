@@ -12,7 +12,7 @@ namespace ui512aTests
 	TEST_CLASS ( ui512aTests )
 	{
 	public:
-		const s32 runcount = 100;
+		const s32 runcount = 1000;
 		const s32 timingcount = 1000000;
 
 		/// <summary>
@@ -37,9 +37,9 @@ namespace ui512aTests
 		{
 			u64 seed = 0;
 			u32 dist [ 10 ] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-			u64 split = 9223372036854775807ull / 10;
+			const u64 split = 9223372036854775807ull / 10ull;
 			u32 distc = 0;
-			u32 randomcount = 10000;
+			const u32 randomcount = 100000;
 
 			for ( u32 i = 0; i < randomcount; i++ )
 			{
@@ -61,7 +61,7 @@ namespace ui512aTests
 		TEST_METHOD ( ui512a_01_zero )
 		{
 			u64 seed = 0;
-			alignas ( 64 ) u64 num1 [ 8 ];
+			alignas ( 64 ) u64 num1 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
 			for ( int i = 0; i < runcount; i++ )
 			{
 				for ( int j = 0; j < 8; j++ )
@@ -71,7 +71,7 @@ namespace ui512aTests
 				zero_u ( num1 );
 				for ( int j = 0; j < 8; j++ )
 				{
-					Assert::AreEqual ( ( const u64 ) num1 [ j ], ( const u64 ) 0 );
+					Assert::AreEqual ( 0ull, num1 [ j ] );
 				};
 			};
 			string runmsg = "Zero function testing. Ran tests " + to_string ( runcount ) + " times, each with pseudo random values.\n";
@@ -95,7 +95,7 @@ namespace ui512aTests
 
 			for ( int j = 0; j < 8; j++ )
 			{
-				Assert::AreEqual ( ( const u64 ) num1 [ j ], ( const u64 ) 0 );
+				Assert::AreEqual ( 0ull, num1 [ j ] );
 			};
 
 			string runmsg = "Zero function timing. Ran " + to_string ( timingcount ) + " times.\n";
@@ -105,8 +105,8 @@ namespace ui512aTests
 		TEST_METHOD ( ui512a_02_copy )
 		{
 			u64 seed = 0;
-			alignas ( 64 ) u64 num1 [ 8 ];
-			alignas ( 64 ) u64 num2 [ 8 ];
+			alignas ( 64 ) u64 num1 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
+			alignas ( 64 ) u64 num2 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
 			for ( int i = 0; i < runcount; i++ )
 			{
 				for ( int j = 0; j < 8; j++ )
@@ -154,7 +154,7 @@ namespace ui512aTests
 		TEST_METHOD ( ui512a_03_set64 )
 		{
 			u64 seed = 0;
-			alignas ( 64 ) u64 num1 [ 8 ];
+			alignas ( 64 ) u64 num1 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
 			u64 val = 0;
 
 			for ( int i = 0; i < runcount; i++ )
@@ -183,10 +183,8 @@ namespace ui512aTests
 			u64 seed = 0;
 			alignas ( 64 ) u64 num1 [ 8 ]
 			{
-				RandomU64 ( &seed ), RandomU64 ( &seed ),
-				RandomU64 ( &seed ), RandomU64 ( &seed ),
-				RandomU64 ( &seed ), RandomU64 ( &seed ),
-				RandomU64 ( &seed ), RandomU64 ( &seed )
+				RandomU64 ( &seed ), RandomU64 ( &seed ), RandomU64 ( &seed ), RandomU64 ( &seed ),
+				RandomU64 ( &seed ), RandomU64 ( &seed ), RandomU64 ( &seed ), RandomU64 ( &seed )
 			};
 
 			u64 val = RandomU64 ( &seed );
@@ -209,8 +207,8 @@ namespace ui512aTests
 		{
 			u64 seed = 0;
 			s32 eval;
-			alignas ( 64 ) u64 num1 [ 8 ];
-			alignas ( 64 ) u64 num2 [ 8 ];
+			alignas ( 64 ) u64 num1 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
+			alignas ( 64 ) u64 num2 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 			for ( int i = 0; i < runcount; i++ )
 			{
@@ -233,7 +231,7 @@ namespace ui512aTests
 				};
 			};
 
-			string runmsg = "Compare function testing. Ran tests " + to_string ( runcount ) + " times, each with pseudo random values.\n";
+			string runmsg = "Compare function testing. Ran tests " + to_string ( 3 * runcount ) + " times, each with pseudo random values.\n";
 			Logger::WriteMessage ( runmsg.c_str ( ) );
 			Logger::WriteMessage ( L"Passed. Tested expected values via assert\n\n." );
 		};
@@ -241,8 +239,8 @@ namespace ui512aTests
 		TEST_METHOD ( ui512a_04_compare_timing )
 		{
 			u64 seed = 0;
-			alignas ( 64 ) u64 num1 [ 8 ];
-			alignas ( 64 ) u64 num2 [ 8 ];
+			alignas ( 64 ) u64 num1 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
+			alignas ( 64 ) u64 num2 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 			for ( int j = 0; j < 8; j++ )
 			{
@@ -263,12 +261,11 @@ namespace ui512aTests
 		TEST_METHOD ( ui512a_05_compare64 )
 		{
 			u64 seed = 0;
-
+			alignas ( 64 ) u64 num1 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 8 };
 			// test that higher order words are checked
 			u64 num2 = 9;
 			for ( int i = 0; i < 7; i++ )
 			{
-				alignas ( 64 ) u64 num1 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 8 };
 				num1 [ i ] = RandomU64 ( &seed );
 				s32 eval;
 				eval = compare_uT64 ( num1, num2 );
@@ -277,24 +274,24 @@ namespace ui512aTests
 
 			for ( int i = 0; i < runcount; i++ )
 			{
-				alignas ( 64 ) u64 num1 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 8 };
-				num1 [ 7 ] = num2 = RandomU64 ( &seed );
+				alignas ( 64 ) u64 num [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 8 };
+				num [ 7 ] = num2 = RandomU64 ( &seed );
 				for ( int j = 0; j <= 7; j++ )
 				{
 					s32 eval;
 					num2++;
-					eval = compare_uT64 ( num1, num2 );
+					eval = compare_uT64 ( num, num2 );
 					Assert::AreEqual ( eval, -1 );
 					num2 -= 2;
-					eval = compare_uT64 ( num1, num2 );
+					eval = compare_uT64 ( num, num2 );
 					Assert::AreEqual ( eval, 1 );
 					num2++;
-					eval = compare_uT64 ( num1, num2 );
+					eval = compare_uT64 ( num, num2 );
 					Assert::AreEqual ( eval, 0 );
 				};
 			};
 
-			string runmsg = "Compare (x64) function testing. Ran tests " + to_string ( runcount ) + " times, each with pseudo random values.\n";
+			string runmsg = "Compare (x64) function testing. Ran tests " + to_string ( 3 * runcount ) + " times, each with pseudo random values.\n";
 			Logger::WriteMessage ( runmsg.c_str ( ) );
 			Logger::WriteMessage ( L"Passed. Tested expected values via assert\n\n." );
 		};
@@ -319,9 +316,9 @@ namespace ui512aTests
 
 		TEST_METHOD ( ui512a_06_add )
 		{
-			alignas ( 64 ) u64 num1 [ 8 ];
-			alignas ( 64 ) u64 num2 [ 8 ];
-			alignas ( 64 ) u64 sum [ 8 ];
+			alignas ( 64 ) u64 num1 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
+			alignas ( 64 ) u64 num2 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
+			alignas ( 64 ) u64 sum [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
 			alignas ( 64 ) u64 one [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 1 };
 			u64 seed = 0;
 			s32 overflow = 0;
@@ -347,6 +344,27 @@ namespace ui512aTests
 				for ( int j = 0; j < 8; j++ )
 				{
 					Assert::AreEqual ( sum [ j ], 0x0000000000000000ull );
+				};
+
+				// run same tests, with destination being one of the sources
+				for ( int j = 0; j < 8; j++ )
+				{
+					num1 [ j ] = RandomU64 ( &seed );
+					num2 [ j ] = ~num1 [ j ];
+				};
+				// add test: "random" number plus ones complement should equal 0xfff..., no carries or overflow
+				overflow = add_u ( num1, num1, num2 );
+				Assert::AreEqual ( overflow, 0 );
+				for ( int j = 0; j < 8; j++ )
+				{
+					Assert::AreEqual ( num1 [ j ], 0xFFFFFFFFFFFFFFFFull );
+				};
+				// now add one, should cascade carries through all eight, making them each zero, and overflow
+				overflow = add_u ( num1, num1, one );		// Note:  Destination (sum) is also an operand
+				Assert::AreEqual ( overflow, 1 );
+				for ( int j = 0; j < 8; j++ )
+				{
+					Assert::AreEqual ( num1 [ j ], 0x0000000000000000ull );
 				};
 			};
 
@@ -381,7 +399,37 @@ namespace ui512aTests
 
 		TEST_METHOD ( ui512a_07_add64 )
 		{
+			alignas ( 64 ) u64 num1 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
+			alignas ( 64 ) u64 sum [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
+			alignas ( 64 ) u64 one [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 1 };
 			u64 seed = 0;
+			u64 num2 = 0;
+			s32 overflow = 0;
+
+			for ( int i = 0; i < runcount; i++ )
+			{
+				for ( int j = 0; j < 8; j++ )
+				{
+					num1 [ j ] = 0xFFFFFFFFFFFFFFFFull;
+					sum [ j ] = 0;
+				};
+				num2 = RandomU64 ( &seed );
+				num1 [ 7 ] = ~num2;
+				// add test: "random" number plus ones complement should equal 0xfff..., no carries or overflow
+				overflow = add_uT64 ( sum, num1, num2 );
+				Assert::AreEqual ( overflow, 0 );
+				for ( int j = 0; j < 8; j++ )
+				{
+					Assert::AreEqual ( sum [ j ], 0xFFFFFFFFFFFFFFFFull );
+				};
+				// now add one, should cascade carries through all eight, making them each zero, and overflow
+				overflow = add_uT64 ( sum, sum, 0x0000000000000001ull );		// Note:  Destination (sum) is also an operand
+				Assert::AreEqual ( overflow, 1 );
+				for ( int j = 0; j < 8; j++ )
+				{
+					Assert::AreEqual ( sum [ j ], 0x0000000000000000ull );
+				};
+			};
 
 			string runmsg = "Add (x64) function testing. Ran tests " + to_string ( runcount ) + " times, each with pseudo random values.\n";
 			Logger::WriteMessage ( runmsg.c_str ( ) );
@@ -406,7 +454,35 @@ namespace ui512aTests
 
 		TEST_METHOD ( ui512a_08_subtract )
 		{
+			alignas ( 64 ) u64 num1 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
+			alignas ( 64 ) u64 num2 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
+			alignas ( 64 ) u64 diff [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
+			alignas ( 64 ) u64 one [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 1 };
 			u64 seed = 0;
+			s32 borrow = 0;
+
+			for ( int i = 0; i < runcount; i++ )
+			{
+				for ( int j = 0; j < 8; j++ )
+				{
+					num1 [ j ] = num2 [ j ] = RandomU64 ( &seed );
+					diff [ j ] = 0;
+				};
+				// subtract test: "random" number minus same number equals zero..., no borrow
+				borrow = sub_u ( diff, num1, num2 );
+				Assert::AreEqual ( borrow, 0 );
+				for ( int j = 0; j < 8; j++ )
+				{
+					Assert::AreEqual ( diff [ j ], 0x0000000000000000ull );
+				};
+				// now subtract one, should cascade borrows through all eight, making them each 0xFFF... , and overflow to borrow
+				borrow = sub_u ( diff, diff, one );		// Note:  Destination (sum) is also an operand
+				Assert::AreEqual ( borrow, 1 );
+				for ( int j = 0; j < 8; j++ )
+				{
+					Assert::AreEqual ( diff [ j ], 0xFFFFFFFFFFFFFFFFull );
+				};
+			};
 
 			string runmsg = "Subtract function testing. Ran tests " + to_string ( runcount ) + " times, each with pseudo random values.\n";
 			Logger::WriteMessage ( runmsg.c_str ( ) );
@@ -425,15 +501,50 @@ namespace ui512aTests
 				sub_u ( diff, num1, num2 );
 			};
 
+			for ( int j = 0; j < 8; j++ )
+			{
+				Assert::AreEqual ( diff [ j ], 0x0ull );
+			};
+
 			string runmsg = "Subtract function timing. Ran " + to_string ( timingcount ) + " times.\n";
 			Logger::WriteMessage ( runmsg.c_str ( ) );
 		};
 
 		TEST_METHOD ( ui512a_09_subtract64 )
 		{
+			alignas ( 64 ) u64 num1 [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
+			alignas ( 64 ) u64 diff [ 8 ] { 0, 0, 0, 0, 0, 0, 0, 0 };
+			u64 num2 = 0;
+			u64 one = 1;
 			u64 seed = 0;
+			s32 borrow = 0;
 
-			string runmsg = "Subtract (x64) function testing. Ran tests " + to_string ( runcount ) + " times, each with pseudo random values.\n";
+			for ( int i = 0; i < runcount; i++ )
+			{
+				for ( int j = 0; j < 8; j++ )
+				{
+					num1 [ j ] = 0;
+					diff [ j ] = 0;
+				};
+				// subtract test: "random" number minus same number equals zero..., no borrow
+				num1 [ 7 ] = num2 = RandomU64 ( &seed );
+				num2 = num1 [ 7 ];
+				borrow = sub_uT64 ( diff, num1, num2 );
+				Assert::AreEqual ( borrow, 0 );
+				for ( int j = 0; j < 8; j++ )
+				{
+					Assert::AreEqual ( diff [ j ], 0x0000000000000000ull );
+				};
+				// now subtract one, should cascade borrows through all eight, making them each 0xFFF... , and overflow to borrow
+				borrow = sub_uT64 ( diff, diff, one );		// Note:  Destination (sum) is also an operand
+				Assert::AreEqual ( borrow, 1 );
+				for ( int j = 0; j < 8; j++ )
+				{
+					Assert::AreEqual ( diff [ j ], 0xFFFFFFFFFFFFFFFFull );
+				};
+			};
+
+			string runmsg = "Subtract (T64) function testing. Ran tests " + to_string ( runcount ) + " times, each with pseudo random values.\n";
 			Logger::WriteMessage ( runmsg.c_str ( ) );
 			Logger::WriteMessage ( L"Passed. Tested expected values via assert\n\n." );
 		};
