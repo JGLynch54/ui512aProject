@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler (x64) Version 14.40.33808.0   05/26/24 14:05:53
+Microsoft (R) Macro Assembler (x64) Version 14.40.33811.0   06/10/24 20:37:02
 ui512a.asm						     Page 1 - 1
 
 
@@ -489,7 +489,7 @@ ui512a.asm						     Page 1 - 1
  00000276			sub_uT64	ENDP 
 
 							END
-Microsoft (R) Macro Assembler (x64) Version 14.40.33808.0   05/26/24 14:05:53
+Microsoft (R) Macro Assembler (x64) Version 14.40.33811.0   06/10/24 20:37:02
 ui512a.asm						     Symbols 2 - 1
 
 

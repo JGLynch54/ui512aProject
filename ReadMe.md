@@ -1,12 +1,18 @@
 Project Description
 
 	ui512 is a small project to provide basic operations for a variable type of unsigned 512 bit integer.
-	The basic operations: zero, copy, compare, add, subtract. Other optional modules provide bit ops and multiply / divide.
-	It is written in assembly language, using the MASM (ml64) assembler provided as an option within Visual Studio (currently using VS Community 2022 17.9.6)
-	It provides external signatures that allow linkage to C and C++ programs, where a shell/wrapper could encapsulate the methods as part of an object.
-	It has assembly time options directing the use of Intel processor extensions: AVX4, AVX2, SIMD, or none: (Z (512), Y (256), or X (128) registers, or regular Q (64bit))
-	If processor extensions are used, the caller must align the variables declared and passed on the appropriate byte boundary (e.g. alignas 64 for 512)
-	This module is very light-weight (less than 1K bytes) and relatively fast, but is not intended for all processor types or all environments. 
+	The basic operations: zero, copy, compare, add, subtract. Other optional modules provide bit ops
+		and multiply / divide.
+	It is written in assembly language, using the MASM (ml64) assembler provided as an option within Visual Studio
+		(currently using VS Community 2022 17.9.6)
+	It provides external signatures that allow linkage to C and C++ programs, where a shell/wrapper could encapsulate
+		the methods as part of an object.
+	It has assembly time options directing the use of Intel processor extensions: AVX4, AVX2, SIMD, or none: 
+		(Z (512), Y (256), or X (128) registers, or regular Q (64bit)).
+	If processor extensions are used, the caller must align the variables declared and passed on the
+		appropriate byte boundary (e.g. alignas 64 for 512)
+	This module is very light-weight (less than 1K bytes) and relatively fast, but is not intended for all 
+		processor types or all environments. 
 	Use for private (hobbyist), or instructional, or as an example for more ambitious projects is all it is meant to be.
 
 
@@ -23,7 +29,8 @@ Installation Instructions
 		It is not necessary, but provides syntax highlighting and mnemonic assistance with asm code.
 		Also instruction performance characteristics.
 
-	B.) Set up or copy project directories, add as project and or solution to new, blank project under Visual Studio solution explorer.
+	B.) Set up or copy project directories, add as project and or solution to new, blank project under Visual Studio
+		solution explorer.
 
 		Get VS to recognize .asm in general, and your files in particular:
 
@@ -45,10 +52,10 @@ Usage Guidelines
 		Right click project name. Select properties.
 		Under General Properties, Configuration Type, Select drop down, select "Static Library (.lib)", Click "Apply"
 		Under Librarian, General, Select Output FIle, CLick Edit, and type:	$(SolutionDir)$(TargetName)$(TargetExt)
-		This places your compiled library file (to include as an additional libarary to link in your host project), in the solution directory.
+	This places your compiled library file (to include as an additional libarary to link in your host project), in the solution directory.
 
-		Get a listing of your assembly. This is not necessary, but I like to look at the assembled code (old school tendency,
-		where we debugged from listings and opcodes).
+	Get a listing of your assembly. This is not necessary, but I like to look at the assembled code (old school tendency,
+	where we debugged from listings and opcodes).
 		Right click project name, Select Properties.
 		Select Microsoft Macro Assembler, Expand it (the little arrow), Select Listing file.
 		Select Enable Assembly Generated Code Listing, click drop down selector, select "YES (/Sg)", Click Apply.
@@ -69,72 +76,71 @@ Usage Guidelines
 
 	Don't forget to put something in a header file that looks something like this:
 
-// Apologies to purists, but I want simpler, clearer, shorter variable declarations (no "unsigned long long", etc.) 
-// Type aliases
+	// Apologies to purists, but I want simpler, clearer, shorter variable declarations (no "unsigned long long", etc.) 
+	// Type aliases
 
-typedef unsigned _int64 u64;
-typedef unsigned int u32;
-typedef unsigned long u32l;
-typedef unsigned short u16;
-typedef char u8;
+	typedef unsigned _int64 u64;
+	typedef unsigned int u32;
+	typedef unsigned long u32l;
+	typedef unsigned short u16;
+	typedef char u8;
 
-typedef _int64 s64;
-typedef int s32;
-typedef short s16;
+	typedef _int64 s64;
+	typedef int s32;
+	typedef short s16;
 
-#define u64_Max UINT64_MAX
-#define u32_Max UINT32_MAX
-#define u16_Max UINT16_MAX
+	#define u64_Max UINT64_MAX
+	#define u32_Max UINT32_MAX
+	#define u16_Max UINT16_MAX
 
-extern "C"
-{
-	// Note:  Unless assembled with "__UseQ", all of the u64* arguments passed must be 64 byte aligned (alignas 64); GP fault will occur if not 
+	extern "C"
+	{
+		// Note:  Unless assembled with "__UseQ", all of the u64* arguments passed must be 64 byte aligned (alignas 64); GP fault will occur if not 
 
-	//	Procedures from ui512a.asm module:
+		//	Procedures from ui512a.asm module:
 
-	// void zero_u ( u64* destarr ); 
-	// fill supplied 512bit (8 QWORDS) with zero
-	void zero_u ( u64* );
+		// void zero_u ( u64* destarr ); 
+		// fill supplied 512bit (8 QWORDS) with zero
+		void zero_u ( u64* );
 
-	// void copy_u ( u64* destarr, u64* srcarr );
-	// copy supplied 512bit (8 QWORDS) source to supplied destination
-	void copy_u ( u64*, u64* );
+		// void copy_u ( u64* destarr, u64* srcarr );
+		// copy supplied 512bit (8 QWORDS) source to supplied destination
+		void copy_u ( u64*, u64* );
 
-	// void set_uT64 ( u64* destarr, u64 value );
-	// set supplied destination 512 bit to supplied u64 value
-	void set_uT64 ( u64*, u64 );
+		// void set_uT64 ( u64* destarr, u64 value );
+		// set supplied destination 512 bit to supplied u64 value
+		void set_uT64 ( u64*, u64 );
 
-	// int compare_u ( u64* lh_op, u64* rh_op );
-	// compare supplied 512bit (8 QWORDS) LH operand to supplied RH operand
-	// returns: (0) for equal, -1 for less than, 1 for greater than (logical, unsigned compare)
-	s32 compare_u ( u64*, u64* );
+		// int compare_u ( u64* lh_op, u64* rh_op );
+		// compare supplied 512bit (8 QWORDS) LH operand to supplied RH operand
+		// returns: (0) for equal, -1 for less than, 1 for greater than (logical, unsigned compare)
+		s32 compare_u ( u64*, u64* );
 
-	// int compare_uT64 ( u64* lh_op, u64 rh_op );
-	// compare supplied 512bit (8 QWORDS) LH operand to supplied 64bit RH operand (value)
-	// returns: (0) for equal, -1 for less than, 1 for greater than (logical, unsigned compare)
-	s32 compare_uT64 ( u64*, u64 );
+		// int compare_uT64 ( u64* lh_op, u64 rh_op );
+		// compare supplied 512bit (8 QWORDS) LH operand to supplied 64bit RH operand (value)
+		// returns: (0) for equal, -1 for less than, 1 for greater than (logical, unsigned compare)
+		s32 compare_uT64 ( u64*, u64 );
 
-	// s32 add_u ( u64* sum, u64* addend1, u64* addend2 );
-	// add supplied 512bit (8 QWORDS) sources to supplied destination
-	// returns: zero for no carry, 1 for carry (overflow)
-	s32 add_u ( u64*, u64*, u64* );
+		// s32 add_u ( u64* sum, u64* addend1, u64* addend2 );
+		// add supplied 512bit (8 QWORDS) sources to supplied destination
+		// returns: zero for no carry, 1 for carry (overflow)
+		s32 add_u ( u64*, u64*, u64* );
 
-	// s32 add_uT64 ( u64* sum, u64* addend1, u64 addend2 );
-	// add 64bit QWORD (value) to supplied 512bit (8 QWORDS), place in supplied destination
-	// returns: zero for no carry, 1 for carry (overflow)
-	s32 add_uT64 ( u64*, u64*, u64 );
+		// s32 add_uT64 ( u64* sum, u64* addend1, u64 addend2 );
+		// add 64bit QWORD (value) to supplied 512bit (8 QWORDS), place in supplied destination
+		// returns: zero for no carry, 1 for carry (overflow)
+		s32 add_uT64 ( u64*, u64*, u64 );
 
-	// s32 sub_u ( u64* difference, u64* left operand, u64* right operand );
-	// subtract supplied 512bit (8 QWORDS) RH OP from LH OP giving difference in destination
-	// returns: zero for no borrow, 1 for borrow (underflow)
-	s32 sub_u ( u64*, u64*, u64* );
+		// s32 sub_u ( u64* difference, u64* left operand, u64* right operand );
+		// subtract supplied 512bit (8 QWORDS) RH OP from LH OP giving difference in destination
+		// returns: zero for no borrow, 1 for borrow (underflow)
+		s32 sub_u ( u64*, u64*, u64* );
 
-	// s32 sub_uT64( u64* difference, u64* left operand, u64 right operand );
-	// subtract supplied 64 bit right hand (64 bit value) op from left hand (512 bit) giving difference
-	// returns: zero for no borrow, 1 for borrow (underflow)
-	s32 sub_uT64 ( u64*, u64*, u64 );
-};
-
+		// s32 sub_uT64( u64* difference, u64* left operand, u64 right operand );
+		// subtract supplied 64 bit right hand (64 bit value) op from left hand (512 bit) giving difference
+		// returns: zero for no borrow, 1 for borrow (underflow)
+		s32 sub_uT64 ( u64*, u64*, u64 );
+	};
 
 
 Contributing
