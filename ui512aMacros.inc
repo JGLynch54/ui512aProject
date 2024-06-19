@@ -9,13 +9,20 @@
 ;
 ;			Notes:
 ;				ui512 is a small project to provide basic operations for a variable type of unsigned 512 bit integer.
-;				The basic operations: zero, copy, compare, add, subtract. Other optional modules provide bit ops and multiply / divide.
-;				It is written in assembly language, using the MASM (ml64) assembler provided as an option within Visual Studio (currently using VS Community 2022 17.9.6)
-;				It provides external signatures that allow linkage to C and C++ programs, where a shell/wrapper could encapsulate the methods as part of an object.
-;				It has assembly time options directing the use of Intel processor extensions: AVX4, AVX2, SIMD, or none: (Z (512), Y (256), or X (128) registers, or regular Q (64bit))
-;				If processor extensions are used, the caller must align the variables declared and passed on the appropriate byte boundary (e.g. alignas 64 for 512)
-;				This module is very light-weight (less than 1K bytes) and relatively fast, but is not intended for all processor types or all environments. 
-;				Use for private (hobbyist), or instructional, or as an example for more ambitious projects is all it is meant to be.
+;				The basic operations: zero, copy, compare, add, subtract.
+;               Other optional modules provide bit ops and multiply / divide.
+;				It is written in assembly language, using the MASM (ml64) assembler provided as an option within Visual Studio.
+;				(currently using VS Community 2022 17.9.6)
+;				It provides external signatures that allow linkage to C and C++ programs,
+;				where a shell/wrapper could encapsulate the methods as part of an object.
+;				It has assembly time options directing the use of Intel processor extensions: AVX4, AVX2, SIMD, or none:
+;				(Z (512), Y (256), or X (128) registers, or regular Q (64bit)).
+;				If processor extensions are used, the caller must align the variables declared and passed
+;				on the appropriate byte boundary (e.g. alignas 64 for 512)
+;				This module is very light-weight (less than 1K bytes) and relatively fast,
+;				but is not intended for all processor types or all environments. 
+;				Use for private (hobbyist), or instructional,
+;				or as an example for more ambitious projects is all it is meant to be.
 ;
 ;			MIT License
 ;
@@ -40,7 +47,7 @@
 ;				SOFTWARE.
 ;
 .list
-IFNDEF						ui512aMacros_INC
+IFNDEF			ui512aMacros_INC
 ui512aMacros_INC EQU		<1>
 ;           header file equivalent extern declarations
 ;			EXTERN "C" signatures (from ui512a.asm)
@@ -68,7 +75,7 @@ EXTERNDEF	compare_u:PROC
 EXTERNDEF	compare_uT64:PROC
 
 ;	// void add_u ( u64* sum, u64* addend1, u64* addend2 );
-;	// add supplied 512bit (8 QWORDS) sources to supplied destination
+;	// add supplied 512bit (8 QWORDS) sources, place in supplied destination
 ;	// returns: zero for no carry, 1 for carry (overflow)
 EXTERNDEF	add_u:PROC
 
@@ -101,9 +108,10 @@ Q_PTR       EQU             QWORD PTR
 D_PTR       EQU             DWORD PTR
 W_PTR       EQU             WORD PTR
 B_PTR       EQU             BYTE PTR
-m32BCST		EQU				DWORD BCST
-m64BCST		EQU				QWORD BCST
-;			mask codes (for compares)
+m32BCST     EQU				DWORD BCST
+m64BCST     EQU				QWORD BCST
+
+;			mask codes (for compares using instructions like VPCMPUQ)
 CPEQ		EQU				0
 CPLT		EQU				1
 CPLE		EQU				2
@@ -175,7 +183,7 @@ Copy512		MACRO			dest, src
 			VMOVDQA64		ZM_PTR [ dest ], ZMM31
 	ELSEIF	__UseY
 			VMOVDQA64		YMM4, YM_PTR [ src ] + [ 0 * 8 ]
-			VMOVDQA64		YM_PTR [ dest ] + [ 0 * 8 ], YMM4
+			VMOVDQA64		YM_PTR [ dest ] + [ 0 * 8 ], YMM4		; alternate ymm regs in case pipeline can execute next without waiting for this.
 			VMOVDQA64		YMM5, YM_PTR [ src ] + [ 4 * 8 ]
 			VMOVDQA64		YM_PTR [ dest ] + [ 4 * 8 ], YMM5
 	ELSEIF	__UseX

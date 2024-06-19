@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler (x64) Version 14.40.33811.0   06/10/24 20:37:02
+Microsoft (R) Macro Assembler (x64) Version 14.40.33811.0   06/19/24 13:59:14
 ui512a.asm						     Page 1 - 1
 
 
@@ -12,13 +12,20 @@ ui512a.asm						     Page 1 - 1
 				;
 				;			Notes:
 				;				ui512 is a small project to provide basic operations for a variable type of unsigned 512 bit integer.
-				;				The basic operations: zero, copy, compare, add, subtract. Other optional modules provide bit ops and multiply / divide.
-				;				It is written in assembly language, using the MASM (ml64) assembler provided as an option within Visual Studio (currently using VS Community 2022 17.9.6)
-				;				It provides external signatures that allow linkage to C and C++ programs, where a shell/wrapper could encapsulate the methods as part of an object.
-				;				It has assembly time options directing the use of Intel processor extensions: AVX4, AVX2, SIMD, or none: (Z (512), Y (256), or X (128) registers, or regular Q (64bit))
-				;				If processor extensions are used, the caller must align the variables declared and passed on the appropriate byte boundary (e.g. alignas 64 for 512)
-				;				This module is very light-weight (less than 1K bytes) and relatively fast, but is not intended for all processor types or all environments. 
-				;				Use for private (hobbyist), or instructional, or as an example for more ambitious projects is all it is meant to be.
+				;				The basic operations: zero, copy, compare, add, subtract.
+				;               Other optional modules provide bit ops and multiply / divide.
+				;				It is written in assembly language, using the MASM (ml64) assembler provided as an option within Visual Studio.
+				;				(currently using VS Community 2022 17.9.6)
+				;				It provides external signatures that allow linkage to C and C++ programs,
+				;				where a shell/wrapper could encapsulate the methods as part of an object.
+				;				It has assembly time options directing the use of Intel processor extensions: AVX4, AVX2, SIMD, or none:
+				;				(Z (512), Y (256), or X (128) registers, or regular Q (64bit)).
+				;				If processor extensions are used, the caller must align the variables declared and passed
+				;				on the appropriate byte boundary (e.g. alignas 64 for 512)
+				;				This module is very light-weight (less than 1K bytes) and relatively fast,
+				;				but is not intended for all processor types or all environments. 
+				;				Use for private (hobbyist), or instructional,
+				;				or as an example for more ambitious projects is all it is meant to be.
 				;
 				;			MIT License
 				;
@@ -46,7 +53,7 @@ ui512a.asm						     Page 1 - 1
 							INCLUDE			ui512aMacros.inc
 			      C .nolist
 			      C .list
-			      C IFNDEF						ui512aMacros_INC
+			      C IFNDEF			ui512aMacros_INC
  = 1			      C ui512aMacros_INC EQU		<1>
 			      C ;           header file equivalent extern declarations
 			      C ;			EXTERN "C" signatures (from ui512a.asm)
@@ -74,7 +81,7 @@ ui512a.asm						     Page 1 - 1
 			      C EXTERNDEF	compare_uT64:PROC
 			      C 
 			      C ;	// void add_u ( u64* sum, u64* addend1, u64* addend2 );
-			      C ;	// add supplied 512bit (8 QWORDS) sources to supplied destination
+			      C ;	// add supplied 512bit (8 QWORDS) sources, place in supplied destination
 			      C ;	// returns: zero for no carry, 1 for carry (overflow)
 			      C EXTERNDEF	add_u:PROC
 			      C 
@@ -107,9 +114,10 @@ ui512a.asm						     Page 1 - 1
  = DWORD PTR		      C D_PTR       EQU             DWORD PTR
  = WORD PTR		      C W_PTR       EQU             WORD PTR
  = BYTE PTR		      C B_PTR       EQU             BYTE PTR
- = DWORD BCST		      C m32BCST		EQU				DWORD BCST
- = QWORD BCST		      C m64BCST		EQU				QWORD BCST
-			      C ;			mask codes (for compares)
+ = DWORD BCST		      C m32BCST     EQU				DWORD BCST
+ = QWORD BCST		      C m64BCST     EQU				QWORD BCST
+			      C 
+			      C ;			mask codes (for compares using instructions like VPCMPUQ)
  = 00000000		      C CPEQ		EQU				0
  = 00000001		      C CPLT		EQU				1
  = 00000002		      C CPLE		EQU				2
@@ -181,7 +189,7 @@ ui512a.asm						     Page 1 - 1
 			      C 			VMOVDQA64		ZM_PTR [ dest ], ZMM31
 			      C 	ELSEIF	__UseY
 			      C 			VMOVDQA64		YMM4, YM_PTR [ src ] + [ 0 * 8 ]
-			      C 			VMOVDQA64		YM_PTR [ dest ] + [ 0 * 8 ], YMM4
+			      C 			VMOVDQA64		YM_PTR [ dest ] + [ 0 * 8 ], YMM4		; alternate ymm regs in case pipeline can execute next without waiting for this.
 			      C 			VMOVDQA64		YMM5, YM_PTR [ src ] + [ 4 * 8 ]
 			      C 			VMOVDQA64		YM_PTR [ dest ] + [ 4 * 8 ], YMM5
 			      C 	ELSEIF	__UseX
@@ -489,7 +497,7 @@ ui512a.asm						     Page 1 - 1
  00000276			sub_uT64	ENDP 
 
 							END
-Microsoft (R) Macro Assembler (x64) Version 14.40.33811.0   06/10/24 20:37:02
+Microsoft (R) Macro Assembler (x64) Version 14.40.33811.0   06/19/24 13:59:14
 ui512a.asm						     Symbols 2 - 1
 
 
