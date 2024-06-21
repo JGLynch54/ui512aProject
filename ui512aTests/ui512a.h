@@ -1,6 +1,15 @@
 #pragma once
+
 #ifndef ui512a_h
 #define ui512a_h
+
+//		ui51a.h
+// 
+//		File:			ui51a.h
+//		Author:			John G.Lynch
+//		Legal:			Copyright @2024, per MIT License below
+//		Date:			May 13, 2024
+//
 
 #include "CommonTypeDefs.h"
 extern "C"
