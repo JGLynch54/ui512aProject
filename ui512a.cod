@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler (x64) Version 14.40.33811.0   06/21/24 11:38:35
+Microsoft (R) Macro Assembler (x64) Version 14.42.34435.0   12/15/24 18:10:21
 ui512a.asm						     Page 1 - 1
 
 
@@ -101,7 +101,7 @@ ui512a.asm						     Page 1 - 1
 			      C EXTERNDEF	sub_uT64:PROC
 			      C 
 			      C ;			Configuration choices
- = 00000001		      C __UseZ		EQU				1							; Use AVX4 processor features (512 bit registers and instructions)
+ = 00000001		      C __UseZ		EQU				1					; Use AVX4 processor features (512 bit registers and instructions)
  = 00000000		      C __UseY		EQU				0							; Use AVX2 processor features (256 bit registers and instructions)
  = 00000000		      C __UseX		EQU				0							; Use SIMD/SSE processor features (128 bit registers and instructions)
  = 00000000		      C __UseQ		EQU				0							; Do not use extensions, use standard x64 bit registers and instructions
@@ -124,9 +124,6 @@ ui512a.asm						     Page 1 - 1
  = 00000004		      C CPNE		EQU				4
  = 00000005		      C CPGE		EQU				5
  = 00000006		      C CPGT		EQU				6
-			      C ;===============================================
-			      C ;          Local macros
-			      C ;===============================================
 			      C 
 			      C ;==========================================================================================
 			      C ;           Notes on x64 calling conventions        aka "fast call"
@@ -150,6 +147,10 @@ ui512a.asm						     Page 1 - 1
 			      C ;
 			      C ;===========================================================================================
 			      C 
+			      C 
+			      C ;===========================================================================================
+			      C ;          Local macros
+			      C ;===========================================================================================
 			      C Zero512		MACRO			dest
 			      C ;
 			      C ;			Zero a 512 bit destination, conditional assembly based on configuration parameters
@@ -221,6 +222,42 @@ ui512a.asm						     Page 1 - 1
 			      C 	ENDIF
 			      C 			ENDM
 			      C 
+			      C ;
+			      C ;			Mask values (for k reg) used to select particulare QWORDS from X, Y, or Z simd regs
+			      C ;
+ = 00000001		      C MaskBit0	EQU				B_PTR [ 00000001b ]
+ = 00000002		      C MaskBit1	EQU				B_PTR [ 00000010b ]
+ = 00000004		      C MaskBit2	EQU				B_PTR [ 00000100b ]
+ = 00000008		      C MaskBit3	EQU				B_PTR [ 00001000b ]
+ = 00000010		      C MaskBit4	EQU				B_PTR [ 00010000b ]
+ = 00000020		      C MaskBit5	EQU				B_PTR [ 00100000b ]
+ = 00000040		      C MaskBit6	EQU				B_PTR [ 01000000b ]
+ = 00000080		      C MaskBit7	EQU				B_PTR [ 10000000b ]
+			      C 
+			      C ;
+			      C ;			Get a GP reg QWORD from within a Z register as specified by mask
+			      C ;			Note: RAX, ZMM0 and k1 are used and not restored
+			      C ;			Example usage: GetZatIdx R11, ZMM1, MaskBit2 or SetZatIdx ZMM1, R12, [ R9 ]  (where R9 is a bit mask, not an integer index)
+			      C ;			Note: These are req to reg ops; no memory fetches (other than instructions from pipeline)
+			      C ;
+			      C GetZatMask	MACRO			dest, src, mask
+			      C 			LEA				RAX,  mask
+			      C 			KMOVB			k1, RAX
+			      C 			VPCOMPRESSQ		ZMM0 {k1}{z}, src
+			      C 			VMOVQ			dest, XMM0
+			      C 			ENDM
+			      C 
+			      C ;
+			      C ;			Set a GP Reg QWORD within a Z register as specified by mask
+			      C ;			Note: RAX and k1 are used and not restored
+			      C ;			Example usage: SetZatIdx ZMM1, R8, MaskBit2
+			      C ;			Note: These are req to reg ops; no memory fetches (other than instructions from pipeline)
+			      C ;
+			      C SetZatMask	MACRO			dest, src, mask
+			      C 			LEA				RAX, mask
+			      C 			KMOVB			k1, RAX
+			      C 			VPBROADCASTQ 	dest {k1}, src
+			      C 			ENDM
 			      C ENDIF
 			      C 
 							OPTION			casemap:none
@@ -230,7 +267,7 @@ ui512a.asm						     Page 1 - 1
 
 				;			zero_u		-	fill supplied 512bit (8 QWORDS) with zero
 				;			Prototype:		extern "C" void zero_u ( u64* destarr );
-				;			destarr		-	Address of 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
+				;			destarr		-	Address of destination 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
 				;			returns		-	nothing
  00000000			zero_u		PROC			PUBLIC
 							Zero512			RCX
@@ -238,13 +275,14 @@ ui512a.asm						     Page 1 - 1
 	   FF
  00000006  62 61 FD 48/ 7F   1				VMOVDQA64		ZM_PTR [ RCX ], ZMM31
 	   39
- 0000000C  C3						RET	
+ 0000000C  C3						RET		
  0000000D			zero_u		ENDP 
+
 
 				;			copy_u		-	copy supplied 512bit (8 QWORDS) source to supplied destination
 				;			Prototype:		extern "C" void copy_u( u64* destarr, u64* srcarr )
-				;			destarr		-	Address of 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
-				;			srcarr		-	Address of  the 64 byte aligned array of 8 64-bit QWORDS (512 bits) in RDX
+				;			destarr		-	Address of destination 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
+				;			srcarr		-	Address of source 64 byte aligned array of 8 64-bit QWORDS (512 bits) in RDX
 				;			returns		-	nothing
  0000000D			copy_u		PROC			PUBLIC
 							Copy512			RCX, RDX
@@ -255,9 +293,10 @@ ui512a.asm						     Page 1 - 1
  00000019  C3						RET	
  0000001A			copy_u		ENDP
 
+
 				;			setuT64		-	set supplied destination 512 bit to supplied u64 value
 				;			Prototype:		extern "C" void set_uT64( u64* destarr, u64 value )
-				;			destarr		-	Address of 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
+				;			destarr		-	Address of destination 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
 				;			src			-	u64 value in RDX
 				;			returns		-	nothing
  0000001A			set_uT64	PROC			PUBLIC
@@ -270,27 +309,27 @@ ui512a.asm						     Page 1 - 1
  0000002A  C3						RET	
  0000002B			set_uT64	ENDP
 
+
 				;			compare_u	-	compare supplied 512bit (8 QWORDS) LH operand to supplied RH operand
 				;			Prototype:		extern "C" s32 compare_u( u64* lh_op, u64* rh_op )
-				;			lh_op		-	Address of 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
-				;			rh_op		-	Address of  the 64 byte aligned array of 8 64-bit QWORDS (512 bits) in RDX
+				;			lh_op		-	Address of LH 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
+				;			rh_op		-	Address of RH 64 byte aligned array of 8 64-bit QWORDS (512 bits) in RDX
 				;			returns		-	(0) for equal, -1 for less than, 1 for greater than
 				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
  0000002B			compare_u	PROC			PUBLIC
 
 					IF		__UseZ
-
  0000002B  62 61 FD 48/ 6F				VMOVDQA64		ZMM30, ZM_PTR [ RCX ]
 	   31
  00000031  62 61 FD 48/ 6F				VMOVDQA64		ZMM31, ZM_PTR [ RDX ]
 	   3A
  00000037  62 93 8D 40/ 1E				VPCMPUQ			K1, ZMM30, ZMM31, CPLT
 	   CF 01
- 0000003E  C5 F9/ 93 C1					KMOVB			RAX, K1
+ 0000003E  C5 F9/ 93 C1					KMOVB			EAX, K1
  00000042  62 93 8D 40/ 1E				VPCMPUQ			K2, ZMM30, ZMM31, CPGT			
 	   D7 06
- 00000049  C5 F9/ 93 CA					KMOVB			RCX, K2
- 0000004D  48/ 3B C8					CMP				RCX, RAX
+ 00000049  C5 F9/ 93 CA					KMOVB			ECX, K2
+ 0000004D  66| 3B C8					CMP				CX, AX
  00000050  B9 00000000					MOV				ECX, 0
  00000055  0F 44 C1					CMOVE			EAX, ECX
  00000058  B9 00000001					MOV				ECX, 1
@@ -298,51 +337,46 @@ ui512a.asm						     Page 1 - 1
  00000060  B9 FFFFFFFF					MOV				ECX, -1
  00000065  0F 4C C1					CMOVL			EAX, ECX
  00000068  C3						RET
-
 					ELSEIF	__UseY
 					ENDIF
-
  00000069			compare_u	ENDP 
+
 
 				;			compare_uT64-	compare supplied 512bit (8 QWORDS) LH operand to supplied 64bit RH operand
 				;			Prototype:		extern "C" s32 compare_uT64( u64* lh_op, u64 rh_op )
-				;			lh_op		-	Address of 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
-				;			rh_op		-	The  64-bit value in RDX
+				;			lh_op		-	Address of LH 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
+				;			rh_op		-	The RH 64-bit value in RDX
 				;			returns		-	(0) for equal, -1 for less than, 1 for greater than
 				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
  00000069			compare_uT64 PROC			PUBLIC
- 00000069  48/ 8B 01					MOV				RAX, [ RCX ] + [ 0 * 8 ]
- 0000006C  48/ 83 F8 00					CMP				RAX, 0
- 00000070  75 47					JNZ				checkGTLT
- 00000072  48/ 8B 41 08					MOV				RAX, [ RCX ] + [ 1 * 8 ]
- 00000076  48/ 83 F8 00					CMP				RAX, 0
- 0000007A  75 3D					JNZ				checkGTLT
- 0000007C  48/ 8B 41 10					MOV				RAX, [ RCX]  + [ 2 * 8 ]
- 00000080  48/ 83 F8 00					CMP				RAX, 0
- 00000084  75 33					JNZ				checkGTLT
- 00000086  48/ 8B 41 18					MOV				RAX, [ RCX ] + [ 3 * 8 ]
- 0000008A  48/ 83 F8 00					CMP				RAX, 0
- 0000008E  75 29					JNZ				checkGTLT
- 00000090  48/ 8B 41 20					MOV				RAX, [ RCX ] + [ 4 * 8 ]
- 00000094  48/ 83 F8 00					CMP				RAX, 0
- 00000098  75 1F					JNZ				checkGTLT
- 0000009A  48/ 8B 41 28					MOV				RAX, [ RCX ] + [ 5 * 8 ] 
- 0000009E  48/ 83 F8 00					CMP				RAX, 0
- 000000A2  75 15					JNZ				checkGTLT
- 000000A4  48/ 8B 41 30					MOV				RAX, [ RCX ] + [ 6 * 8 ]
- 000000A8  48/ 83 F8 00					CMP				RAX, 0
- 000000AC  75 0B					JNZ				checkGTLT
- 000000AE  48/ 8B 41 38					MOV				RAX, [ RCX ] + [ 7 * 8 ]
- 000000B2  48/ 3B C2					CMP				RAX, RDX 
- 000000B5  75 02					JNZ				checkGTLT
- 000000B7  33 C0					XOR				EAX, EAX
- 000000B9			checkGTLT:
- 000000B9  B9 00000001					MOV				ECX, 1
- 000000BE  0F 4F C1					CMOVG			EAX, ECX
- 000000C1  B9 FFFFFFFF					MOV				ECX, -1
- 000000C6  0F 4C C1					CMOVL			EAX, ECX
- 000000C9  C3						RET
- 000000CA			compare_uT64 ENDP
+
+					IF		__UseZ
+ 00000069  62 61 FD 48/ 6F				VMOVDQA64		ZMM30, ZM_PTR [ RCX ]
+	   31
+ 0000006F  48/ 8D 04 25					LEA				RAX, MaskBit7
+	   00000080
+ 00000077  C5 F9/ 92 C8					KMOVB			k1, RAX
+ 0000007B  62 62 FD C9/ 7C				VPBROADCASTQ 	ZMM31 {k1}{z}, RDX
+	   FA
+ 00000081  62 93 8D 40/ 1E				VPCMPUQ			K1, ZMM30, ZMM31, CPLT
+	   CF 01
+ 00000088  C5 F9/ 93 C1					KMOVB			EAX, K1
+ 0000008C  62 93 8D 40/ 1E				VPCMPUQ			K2, ZMM30, ZMM31, CPGT			
+	   D7 06
+ 00000093  C5 F9/ 93 CA					KMOVB			ECX, K2
+ 00000097  66| 3B C8					CMP				CX, AX
+ 0000009A  B9 00000000					MOV				ECX, 0
+ 0000009F  0F 44 C1					CMOVE			EAX, ECX
+					ELSE
+					ENDIF
+ 000000A2			checkGTLT:
+ 000000A2  B9 00000001					MOV				ECX, 1
+ 000000A7  0F 4F C1					CMOVG			EAX, ECX
+ 000000AA  B9 FFFFFFFF					MOV				ECX, -1
+ 000000AF  0F 4C C1					CMOVL			EAX, ECX
+ 000000B2			done:
+ 000000B2  C3						RET
+ 000000B3			compare_uT64 ENDP
 
 				;			add_u		-	add supplied 512bit (8 QWORDS) sources to supplied destination
 				;			Prototype:		extern "C" s32 add_u( u64* sum, u64* addend1, u64* addend2 )
@@ -351,36 +385,43 @@ ui512a.asm						     Page 1 - 1
 				;			addend2		-	Address of  the 64 byte aligned array of 8 64-bit QWORDS (512 bits) in R8
 				;			returns		-	zero for no carry, 1 for carry (overflow)
 				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
- 000000CA			add_u		PROC			PUBLIC 
- 000000CA  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]
- 000000CE  49/ 03 40 38					ADD				RAX, [ R8 ] + [ 7 * 8 ]
- 000000D2  48/ 89 41 38					MOV				[ RCX ] + [ 7 * 8 ], RAX
- 000000D6  48/ 8B 42 30					MOV				RAX, [ RDX ] + [ 6 * 8 ]
- 000000DA  49/ 13 40 30					ADC				RAX, [ R8 ] + [ 6 * 8 ]
- 000000DE  48/ 89 41 30					MOV				[ RCX ] + [ 6 * 8 ] , RAX
- 000000E2  48/ 8B 42 28					MOV				RAX, [ RDX ] + [ 5 * 8 ]
- 000000E6  49/ 13 40 28					ADC				RAX, [ R8 ] + [ 5 * 8 ]
- 000000EA  48/ 89 41 28					MOV				[ RCX ] + [ 5 * 8 ], RAX
- 000000EE  48/ 8B 42 20					MOV				RAX, [ RDX ] + [ 4 * 8 ]
- 000000F2  49/ 13 40 20					ADC				RAX, [ R8 ] + [ 4 * 8 ]
- 000000F6  48/ 89 41 20					MOV				[ RCX ] + [ 4 * 8 ], RAX
- 000000FA  48/ 8B 42 18					MOV				RAX, [ RDX ] + [ 3 * 8 ]
- 000000FE  49/ 13 40 18					ADC				RAX, [ R8 ] + [ 3 * 8 ]
- 00000102  48/ 89 41 18					MOV				[ RCX ] + [ 3 * 8 ], RAX
- 00000106  48/ 8B 42 10					MOV				RAX, [ RDX ] + [ 2 * 8 ]
- 0000010A  49/ 13 40 10					ADC				RAX, [ R8 ] + [ 2 * 8 ]
- 0000010E  48/ 89 41 10					MOV				[ RCX ] + [ 2 * 8 ], RAX
- 00000112  48/ 8B 42 08					MOV				RAX, [ RDX ] + [ 1 * 8 ]
- 00000116  49/ 13 40 08					ADC				RAX, [ R8 ] + [ 1 * 8 ]
- 0000011A  48/ 89 41 08					MOV				[ RCX ] + [ 1 * 8 ], RAX
- 0000011E  48/ 8B 02					MOV				RAX, [ RDX ] + [ 0 * 8 ]
- 00000121  49/ 13 00					ADC				RAX, [ R8 ] + [ 0 * 8 ]
- 00000124  48/ 89 01					MOV				[ RCX ] + [ 0 * 8 ], RAX
- 00000127  B8 00000000					MOV				EAX, 0
- 0000012C  B9 00000001					MOV				ECX, 1
- 00000131  0F 42 C1					CMOVC			EAX, ECX
- 00000134  C3						RET	
- 00000135			add_u		ENDP 
+ 000000B3			add_u		PROC			PUBLIC 
+ 000000B3  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]
+ 000000B7  49/ 03 40 38					ADD				RAX, [ R8 ] + [ 7 * 8 ]
+ 000000BB  48/ 89 41 38					MOV				[ RCX ] + [ 7 * 8 ], RAX
+ 000000BF  48/ 8B 42 30					MOV				RAX, [ RDX ] + [ 6 * 8 ]
+ 000000C3  66| 49/ 0F 38 F6				ADCX			RAX, [ R8 ] + [ 6 * 8 ]
+	   40 30
+ 000000CA  48/ 89 41 30					MOV				[ RCX ] + [ 6 * 8 ] , RAX
+ 000000CE  48/ 8B 42 28					MOV				RAX, [ RDX ] + [ 5 * 8 ]
+ 000000D2  66| 49/ 0F 38 F6				ADCX			RAX, [ R8 ] + [ 5 * 8 ]
+	   40 28
+ 000000D9  48/ 89 41 28					MOV				[ RCX ] + [ 5 * 8 ], RAX
+ 000000DD  48/ 8B 42 20					MOV				RAX, [ RDX ] + [ 4 * 8 ]
+ 000000E1  66| 49/ 0F 38 F6				ADCX			RAX, [ R8 ] + [ 4 * 8 ]
+	   40 20
+ 000000E8  48/ 89 41 20					MOV				[ RCX ] + [ 4 * 8 ], RAX
+ 000000EC  48/ 8B 42 18					MOV				RAX, [ RDX ] + [ 3 * 8 ]
+ 000000F0  66| 49/ 0F 38 F6				ADCX			RAX, [ R8 ] + [ 3 * 8 ]
+	   40 18
+ 000000F7  48/ 89 41 18					MOV				[ RCX ] + [ 3 * 8 ], RAX
+ 000000FB  48/ 8B 42 10					MOV				RAX, [ RDX ] + [ 2 * 8 ]
+ 000000FF  66| 49/ 0F 38 F6				ADCX			RAX, [ R8 ] + [ 2 * 8 ]
+	   40 10
+ 00000106  48/ 89 41 10					MOV				[ RCX ] + [ 2 * 8 ], RAX
+ 0000010A  48/ 8B 42 08					MOV				RAX, [ RDX ] + [ 1 * 8 ]
+ 0000010E  66| 49/ 0F 38 F6				ADCX			RAX, [ R8 ] + [ 1 * 8 ]
+	   40 08
+ 00000115  48/ 89 41 08					MOV				[ RCX ] + [ 1 * 8 ], RAX
+ 00000119  48/ 8B 02					MOV				RAX, [ RDX ] + [ 0 * 8 ]
+ 0000011C  66| 49/ 0F 38 F6				ADCX			RAX, [ R8 ] + [ 0 * 8 ]
+	   00
+ 00000122  48/ 89 01					MOV				[ RCX ] + [ 0 * 8 ], RAX
+ 00000125  B8 00000000					MOV				EAX, 0
+ 0000012A  B9 00000001					MOV				ECX, 1
+ 0000012F  0F 42 C1					CMOVC			EAX, ECX
+ 00000132  C3						RET	
+ 00000133			add_u		ENDP 
 
 				;			add_uT64	-	add supplied 64bit QWORD (value) to 512bit (8 QWORDS), place in supplied destination
 				;			Prototype:		extern "C" s32 add_uT64( u64* sum, u64* addend1, u64 addend2 )
@@ -389,36 +430,36 @@ ui512a.asm						     Page 1 - 1
 				;			addend2		-	The 64-bit value in R8
 				;			returns		-	zero for no carry, 1 for carry (overflow)
 				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
- 00000135			add_uT64	PROC			PUBLIC 
- 00000135  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]
- 00000139  49/ 03 C0					ADD				RAX, R8 
- 0000013C  48/ 89 41 38					MOV				[ RCX ] + [ 7 * 8 ], RAX
- 00000140  48/ 8B 42 30					MOV				RAX, [ RDX ] + [ 6 * 8 ]
- 00000144  48/ 83 D0 00					ADC				RAX, 0
- 00000148  48/ 89 41 30					MOV				[ RCX ] + [ 6 * 8 ], RAX
- 0000014C  48/ 8B 42 28					MOV				RAX, [ RDX ] + [ 5 * 8 ]
- 00000150  48/ 83 D0 00					ADC				RAX, 0
- 00000154  48/ 89 41 28					MOV				[ RCX ] + [ 5 * 8 ], RAX
- 00000158  48/ 8B 42 20					MOV				RAX, [ RDX ] + [ 4 * 8 ]
- 0000015C  48/ 83 D0 00					ADC				RAX, 0
- 00000160  48/ 89 41 20					MOV				[ RCX ] + [ 4 * 8 ], RAX
- 00000164  48/ 8B 42 18					MOV				RAX, [ RDX ] + [ 3 * 8 ]
- 00000168  48/ 83 D0 00					ADC				RAX, 0
- 0000016C  48/ 89 41 18					MOV				[ RCX ] + [ 3 * 8 ], RAX
- 00000170  48/ 8B 42 10					MOV				RAX, [ RDX ] + [ 2 * 8 ]
- 00000174  48/ 83 D0 00					ADC				RAX, 0
- 00000178  48/ 89 41 10					MOV				[ RCX ] + [ 2 * 8 ], RAX
- 0000017C  48/ 8B 42 08					MOV				RAX, [ RDX ] + [ 1 * 8 ]
- 00000180  48/ 83 D0 00					ADC				RAX, 0
- 00000184  48/ 89 41 08					MOV				[ RCX ] + [ 1 * 8 ], RAX
- 00000188  48/ 8B 02					MOV				RAX, [ RDX ] + [ 0 * 8 ]
- 0000018B  48/ 83 D0 00					ADC				RAX, 0
- 0000018F  48/ 89 01					MOV				[ RCX ] + [ 0 * 8 ], RAX
- 00000192  B8 00000000					MOV				EAX, 0
- 00000197  B9 00000001					MOV				ECX, 1
- 0000019C  0F 42 C1					CMOVC			EAX, ECX
- 0000019F  C3						RET	
- 000001A0			add_uT64	ENDP 
+ 00000133			add_uT64	PROC			PUBLIC 
+ 00000133  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]
+ 00000137  49/ 03 C0					ADD				RAX, R8 
+ 0000013A  48/ 89 41 38					MOV				[ RCX ] + [ 7 * 8 ], RAX
+ 0000013E  48/ 8B 42 30					MOV				RAX, [ RDX ] + [ 6 * 8 ]
+ 00000142  48/ 83 D0 00					ADC				RAX, 0
+ 00000146  48/ 89 41 30					MOV				[ RCX ] + [ 6 * 8 ], RAX
+ 0000014A  48/ 8B 42 28					MOV				RAX, [ RDX ] + [ 5 * 8 ]
+ 0000014E  48/ 83 D0 00					ADC				RAX, 0
+ 00000152  48/ 89 41 28					MOV				[ RCX ] + [ 5 * 8 ], RAX
+ 00000156  48/ 8B 42 20					MOV				RAX, [ RDX ] + [ 4 * 8 ]
+ 0000015A  48/ 83 D0 00					ADC				RAX, 0
+ 0000015E  48/ 89 41 20					MOV				[ RCX ] + [ 4 * 8 ], RAX
+ 00000162  48/ 8B 42 18					MOV				RAX, [ RDX ] + [ 3 * 8 ]
+ 00000166  48/ 83 D0 00					ADC				RAX, 0
+ 0000016A  48/ 89 41 18					MOV				[ RCX ] + [ 3 * 8 ], RAX
+ 0000016E  48/ 8B 42 10					MOV				RAX, [ RDX ] + [ 2 * 8 ]
+ 00000172  48/ 83 D0 00					ADC				RAX, 0
+ 00000176  48/ 89 41 10					MOV				[ RCX ] + [ 2 * 8 ], RAX
+ 0000017A  48/ 8B 42 08					MOV				RAX, [ RDX ] + [ 1 * 8 ]
+ 0000017E  48/ 83 D0 00					ADC				RAX, 0
+ 00000182  48/ 89 41 08					MOV				[ RCX ] + [ 1 * 8 ], RAX
+ 00000186  48/ 8B 02					MOV				RAX, [ RDX ] + [ 0 * 8 ]
+ 00000189  48/ 83 D0 00					ADC				RAX, 0
+ 0000018D  48/ 89 01					MOV				[ RCX ] + [ 0 * 8 ], RAX
+ 00000190  B8 00000000					MOV				EAX, 0
+ 00000195  B9 00000001					MOV				ECX, 1
+ 0000019A  0F 42 C1					CMOVC			EAX, ECX
+ 0000019D  C3						RET	
+ 0000019E			add_uT64	ENDP 
 
 				;			sub_u		-	subtract supplied 512bit (8 QWORDS) RH OP from LH OP giving difference in destination
 				;			Prototype:		extern "C" s32 sub_u( u64* difference, u64* left operand, u64* right operand )
@@ -427,36 +468,36 @@ ui512a.asm						     Page 1 - 1
 				;			rh_op		-	Address of the RHOP 8 64-bit QWORDS (512 bits) in R8
 				;			returns		-	zero for no borrow, 1 for borrow (underflow)
 				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
- 000001A0			sub_u		PROC			PUBLIC 
- 000001A0  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]
- 000001A4  49/ 2B 40 38					SUB				RAX, [ R8 ] + [ 7 * 8 ]
- 000001A8  48/ 89 41 38					MOV				[ RCX ] + [ 7 * 8 ], RAX
- 000001AC  48/ 8B 42 30					MOV				RAX, [ RDX ] + [ 6 * 8]
- 000001B0  49/ 1B 40 30					SBB				RAX, [ R8 ] + [ 6 * 8 ]
- 000001B4  48/ 89 41 30					MOV				[ RCX ] + [ 6 * 8 ], RAX
- 000001B8  48/ 8B 42 28					MOV				RAX, [ RDX ] + [ 5 * 8 ]
- 000001BC  49/ 1B 40 28					SBB				RAX, [ R8 ] + [ 5 * 8 ]
- 000001C0  48/ 89 41 28					MOV				[ RCX ] + [ 5 * 8 ], RAX
- 000001C4  48/ 8B 42 20					MOV				RAX, [ RDX ] + [ 4 * 8 ]
- 000001C8  49/ 1B 40 20					SBB				RAX, [ R8 ] + [ 4 * 8 ]
- 000001CC  48/ 89 41 20					MOV				[ RCX ] + [ 4 * 8 ], RAX
- 000001D0  48/ 8B 42 18					MOV				RAX, [ RDX ] + [ 3 * 8 ]
- 000001D4  49/ 1B 40 18					SBB				RAX, [ R8 ] + [ 3 * 8 ]
- 000001D8  48/ 89 41 18					MOV				[ RCX ] + [ 3 * 8 ], RAX
- 000001DC  48/ 8B 42 10					MOV				RAX, [ RDX ] + [ 2 * 8 ]
- 000001E0  49/ 1B 40 10					SBB				RAX, [ R8 ] + [ 2 * 8 ]
- 000001E4  48/ 89 41 10					MOV				[ RCX ] + [ 2 * 8 ], RAX
- 000001E8  48/ 8B 42 08					MOV				RAX, [ RDX ] + [ 1 * 8 ]
- 000001EC  49/ 1B 40 08					SBB 			RAX, [ R8 ] + [ 1 * 8 ]
- 000001F0  48/ 89 41 08					MOV				[ RCX ] + [ 1 * 8 ], RAX
- 000001F4  48/ 8B 02					MOV				RAX, [ RDX ] + [ 0 * 8 ]
- 000001F7  49/ 1B 00					SBB				RAX, [ R8 ] + [ 0 * 8 ]
- 000001FA  48/ 89 01					MOV				[ RCX ] + [ 0 * 8 ], RAX
- 000001FD  B8 00000000					MOV				EAX, 0
- 00000202  B9 00000001					MOV				ECX, 1
- 00000207  0F 42 C1					CMOVC			EAX, ECX
- 0000020A  C3						RET
- 0000020B			sub_u		ENDP 
+ 0000019E			sub_u		PROC			PUBLIC 
+ 0000019E  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]
+ 000001A2  49/ 2B 40 38					SUB				RAX, [ R8 ] + [ 7 * 8 ]
+ 000001A6  48/ 89 41 38					MOV				[ RCX ] + [ 7 * 8 ], RAX
+ 000001AA  48/ 8B 42 30					MOV				RAX, [ RDX ] + [ 6 * 8]
+ 000001AE  49/ 1B 40 30					SBB				RAX, [ R8 ] + [ 6 * 8 ]
+ 000001B2  48/ 89 41 30					MOV				[ RCX ] + [ 6 * 8 ], RAX
+ 000001B6  48/ 8B 42 28					MOV				RAX, [ RDX ] + [ 5 * 8 ]
+ 000001BA  49/ 1B 40 28					SBB				RAX, [ R8 ] + [ 5 * 8 ]
+ 000001BE  48/ 89 41 28					MOV				[ RCX ] + [ 5 * 8 ], RAX
+ 000001C2  48/ 8B 42 20					MOV				RAX, [ RDX ] + [ 4 * 8 ]
+ 000001C6  49/ 1B 40 20					SBB				RAX, [ R8 ] + [ 4 * 8 ]
+ 000001CA  48/ 89 41 20					MOV				[ RCX ] + [ 4 * 8 ], RAX
+ 000001CE  48/ 8B 42 18					MOV				RAX, [ RDX ] + [ 3 * 8 ]
+ 000001D2  49/ 1B 40 18					SBB				RAX, [ R8 ] + [ 3 * 8 ]
+ 000001D6  48/ 89 41 18					MOV				[ RCX ] + [ 3 * 8 ], RAX
+ 000001DA  48/ 8B 42 10					MOV				RAX, [ RDX ] + [ 2 * 8 ]
+ 000001DE  49/ 1B 40 10					SBB				RAX, [ R8 ] + [ 2 * 8 ]
+ 000001E2  48/ 89 41 10					MOV				[ RCX ] + [ 2 * 8 ], RAX
+ 000001E6  48/ 8B 42 08					MOV				RAX, [ RDX ] + [ 1 * 8 ]
+ 000001EA  49/ 1B 40 08					SBB 			RAX, [ R8 ] + [ 1 * 8 ]
+ 000001EE  48/ 89 41 08					MOV				[ RCX ] + [ 1 * 8 ], RAX
+ 000001F2  48/ 8B 02					MOV				RAX, [ RDX ] + [ 0 * 8 ]
+ 000001F5  49/ 1B 00					SBB				RAX, [ R8 ] + [ 0 * 8 ]
+ 000001F8  48/ 89 01					MOV				[ RCX ] + [ 0 * 8 ], RAX
+ 000001FB  B8 00000000					MOV				EAX, 0
+ 00000200  B9 00000001					MOV				ECX, 1
+ 00000205  0F 42 C1					CMOVC			EAX, ECX
+ 00000208  C3						RET
+ 00000209			sub_u		ENDP 
 
 				;			sub_uT64	-	subtract supplied 64 bit right hand (64 bit value) op from left hand (512 bit) giving difference
 				;			Prototype:		extern "C" s32 sub_uT64( u64* difference, u64* left operand, u64 right operand )
@@ -465,39 +506,39 @@ ui512a.asm						     Page 1 - 1
 				;			rh_op		-	64-bitvalue in R8
 				;			returns		-	zero for no borrow, 1 for borrow (underflow)
 				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
- 0000020B			sub_uT64	PROC			PUBLIC 
- 0000020B  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]
- 0000020F  49/ 2B C0					SUB				RAX, R8
- 00000212  48/ 89 41 38					MOV				[ RCX ] + [ 7 * 8 ], RAX
- 00000216  48/ 8B 42 30					MOV				RAX, [ RDX ] + [ 6 * 8 ] 
- 0000021A  48/ 83 D8 00					SBB				RAX, 0
- 0000021E  48/ 89 41 30					MOV				[ RCX ] + [ 6 * 8 ], RAX
- 00000222  48/ 8B 42 28					MOV				RAX, [ RDX ] + [ 5 * 8 ]
- 00000226  48/ 83 D8 00					SBB				RAX, 0
- 0000022A  48/ 89 41 28					MOV				[ RCX ] + [ 5 * 8 ], RAX
- 0000022E  48/ 8B 42 20					MOV				RAX, [ RDX ] + [ 4 * 8 ]
- 00000232  48/ 83 D8 00					SBB				RAX, 0
- 00000236  48/ 89 41 20					MOV				[ RCX ] + [ 4 * 8 ], RAX
- 0000023A  48/ 8B 42 18					MOV				RAX, [ RDX ] + [ 3 * 8 ]
- 0000023E  48/ 83 D8 00					SBB				RAX, 0
- 00000242  48/ 89 41 18					MOV				[ RCX ] + [ 3 * 8 ], RAX
- 00000246  48/ 8B 42 10					MOV				RAX, [ RDX ] + [ 2 * 8 ]
- 0000024A  48/ 83 D8 00					SBB				RAX, 0
- 0000024E  48/ 89 41 10					MOV				[ RCX ] + [ 2 * 8 ], RAX
- 00000252  48/ 8B 42 08					MOV				RAX, [ RDX ] + [ 1 * 8 ]
- 00000256  48/ 83 D8 00					SBB 			RAX, 0
- 0000025A  48/ 89 41 08					MOV				[ RCX ] + [ 1 * 8 ], RAX
- 0000025E  48/ 8B 02					MOV				RAX, [ RDX ] + [ 0 * 8 ]
- 00000261  48/ 83 D8 00					SBB				RAX, 0
- 00000265  48/ 89 01					MOV				[ RCX ] + [ 0 * 8 ], RAX
- 00000268  B8 00000000					MOV				EAX, 0
- 0000026D  B9 00000001					MOV				ECX, 1
- 00000272  0F 42 C1					CMOVC			EAX, ECX
- 00000275  C3						RET
- 00000276			sub_uT64	ENDP 
+ 00000209			sub_uT64	PROC			PUBLIC 
+ 00000209  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]
+ 0000020D  49/ 2B C0					SUB				RAX, R8
+ 00000210  48/ 89 41 38					MOV				[ RCX ] + [ 7 * 8 ], RAX
+ 00000214  48/ 8B 42 30					MOV				RAX, [ RDX ] + [ 6 * 8 ] 
+ 00000218  48/ 83 D8 00					SBB				RAX, 0
+ 0000021C  48/ 89 41 30					MOV				[ RCX ] + [ 6 * 8 ], RAX
+ 00000220  48/ 8B 42 28					MOV				RAX, [ RDX ] + [ 5 * 8 ]
+ 00000224  48/ 83 D8 00					SBB				RAX, 0
+ 00000228  48/ 89 41 28					MOV				[ RCX ] + [ 5 * 8 ], RAX
+ 0000022C  48/ 8B 42 20					MOV				RAX, [ RDX ] + [ 4 * 8 ]
+ 00000230  48/ 83 D8 00					SBB				RAX, 0
+ 00000234  48/ 89 41 20					MOV				[ RCX ] + [ 4 * 8 ], RAX
+ 00000238  48/ 8B 42 18					MOV				RAX, [ RDX ] + [ 3 * 8 ]
+ 0000023C  48/ 83 D8 00					SBB				RAX, 0
+ 00000240  48/ 89 41 18					MOV				[ RCX ] + [ 3 * 8 ], RAX
+ 00000244  48/ 8B 42 10					MOV				RAX, [ RDX ] + [ 2 * 8 ]
+ 00000248  48/ 83 D8 00					SBB				RAX, 0
+ 0000024C  48/ 89 41 10					MOV				[ RCX ] + [ 2 * 8 ], RAX
+ 00000250  48/ 8B 42 08					MOV				RAX, [ RDX ] + [ 1 * 8 ]
+ 00000254  48/ 83 D8 00					SBB 			RAX, 0
+ 00000258  48/ 89 41 08					MOV				[ RCX ] + [ 1 * 8 ], RAX
+ 0000025C  48/ 8B 02					MOV				RAX, [ RDX ] + [ 0 * 8 ]
+ 0000025F  48/ 83 D8 00					SBB				RAX, 0
+ 00000263  48/ 89 01					MOV				[ RCX ] + [ 0 * 8 ], RAX
+ 00000266  B8 00000000					MOV				EAX, 0
+ 0000026B  B9 00000001					MOV				ECX, 1
+ 00000270  0F 42 C1					CMOVC			EAX, ECX
+ 00000273  C3						RET
+ 00000274			sub_uT64	ENDP 
 
 							END
-Microsoft (R) Macro Assembler (x64) Version 14.40.33811.0   06/21/24 11:38:35
+Microsoft (R) Macro Assembler (x64) Version 14.42.34435.0   12/15/24 18:10:21
 ui512a.asm						     Symbols 2 - 1
 
 
@@ -508,6 +549,8 @@ Macros:
                 N a m e                 Type
 
 Copy512  . . . . . . . . . . . .	Proc
+GetZatMask . . . . . . . . . . .	Proc
+SetZatMask . . . . . . . . . . .	Proc
 Zero512  . . . . . . . . . . . .	Proc
 
 
@@ -515,15 +558,16 @@ Procedures, parameters, and locals:
 
                 N a m e                 Type     Value    Attr
 
-add_uT64 . . . . . . . . . . . .	P 	 00000135 _TEXT	Length= 0000006B Public
-add_u  . . . . . . . . . . . . .	P 	 000000CA _TEXT	Length= 0000006B Public
-compare_uT64 . . . . . . . . . .	P 	 00000069 _TEXT	Length= 00000061 Public
-  checkGTLT  . . . . . . . . . .	L 	 000000B9 _TEXT	
+add_uT64 . . . . . . . . . . . .	P 	 00000133 _TEXT	Length= 0000006B Public
+add_u  . . . . . . . . . . . . .	P 	 000000B3 _TEXT	Length= 00000080 Public
+compare_uT64 . . . . . . . . . .	P 	 00000069 _TEXT	Length= 0000004A Public
+  checkGTLT  . . . . . . . . . .	L 	 000000A2 _TEXT	
+  done . . . . . . . . . . . . .	L 	 000000B2 _TEXT	
 compare_u  . . . . . . . . . . .	P 	 0000002B _TEXT	Length= 0000003E Public
 copy_u . . . . . . . . . . . . .	P 	 0000000D _TEXT	Length= 0000000D Public
 set_uT64 . . . . . . . . . . . .	P 	 0000001A _TEXT	Length= 00000011 Public
-sub_uT64 . . . . . . . . . . . .	P 	 0000020B _TEXT	Length= 0000006B Public
-sub_u  . . . . . . . . . . . . .	P 	 000001A0 _TEXT	Length= 0000006B Public
+sub_uT64 . . . . . . . . . . . .	P 	 00000209 _TEXT	Length= 0000006B Public
+sub_u  . . . . . . . . . . . . .	P 	 0000019E _TEXT	Length= 0000006B Public
 zero_u . . . . . . . . . . . . .	P 	 00000000 _TEXT	Length= 0000000D Public
 
 
@@ -539,6 +583,14 @@ CPLE . . . . . . . . . . . . . .	Number	 00000002h
 CPLT . . . . . . . . . . . . . .	Number	 00000001h   
 CPNE . . . . . . . . . . . . . .	Number	 00000004h   
 D_PTR  . . . . . . . . . . . . .	Text   	 DWORD PTR
+MaskBit0 . . . . . . . . . . . .	Number	 00000001h   
+MaskBit1 . . . . . . . . . . . .	Number	 00000002h   
+MaskBit2 . . . . . . . . . . . .	Number	 00000004h   
+MaskBit3 . . . . . . . . . . . .	Number	 00000008h   
+MaskBit4 . . . . . . . . . . . .	Number	 00000010h   
+MaskBit5 . . . . . . . . . . . .	Number	 00000020h   
+MaskBit6 . . . . . . . . . . . .	Number	 00000040h   
+MaskBit7 . . . . . . . . . . . .	Number	 00000080h   
 Q_PTR  . . . . . . . . . . . . .	Text   	 QWORD PTR
 W_PTR  . . . . . . . . . . . . .	Text   	 WORD PTR
 XM_PTR . . . . . . . . . . . . .	Text   	 XMMWORD PTR

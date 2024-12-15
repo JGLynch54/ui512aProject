@@ -95,7 +95,7 @@ EXTERNDEF	sub_u:PROC
 EXTERNDEF	sub_uT64:PROC
 
 ;			Configuration choices
-__UseZ		EQU				1							; Use AVX4 processor features (512 bit registers and instructions)
+__UseZ		EQU				1					; Use AVX4 processor features (512 bit registers and instructions)
 __UseY		EQU				0							; Use AVX2 processor features (256 bit registers and instructions)
 __UseX		EQU				0							; Use SIMD/SSE processor features (128 bit registers and instructions)
 __UseQ		EQU				0							; Do not use extensions, use standard x64 bit registers and instructions
@@ -118,9 +118,6 @@ CPLE		EQU				2
 CPNE		EQU				4
 CPGE		EQU				5
 CPGT		EQU				6
-;===============================================
-;          Local macros
-;===============================================
 
 ;==========================================================================================
 ;           Notes on x64 calling conventions        aka "fast call"
@@ -144,6 +141,10 @@ CPGT		EQU				6
 ;
 ;===========================================================================================
 
+
+;===========================================================================================
+;          Local macros
+;===========================================================================================
 Zero512		MACRO			dest
 ;
 ;			Zero a 512 bit destination, conditional assembly based on configuration parameters
@@ -215,4 +216,40 @@ Copy512		MACRO			dest, src
 	ENDIF
 			ENDM
 
+;
+;			Mask values (for k reg) used to select particulare QWORDS from X, Y, or Z simd regs
+;
+MaskBit0	EQU				B_PTR [ 00000001b ]
+MaskBit1	EQU				B_PTR [ 00000010b ]
+MaskBit2	EQU				B_PTR [ 00000100b ]
+MaskBit3	EQU				B_PTR [ 00001000b ]
+MaskBit4	EQU				B_PTR [ 00010000b ]
+MaskBit5	EQU				B_PTR [ 00100000b ]
+MaskBit6	EQU				B_PTR [ 01000000b ]
+MaskBit7	EQU				B_PTR [ 10000000b ]
+
+;
+;			Get a GP reg QWORD from within a Z register as specified by mask
+;			Note: RAX, ZMM0 and k1 are used and not restored
+;			Example usage: GetZatIdx R11, ZMM1, MaskBit2 or SetZatIdx ZMM1, R12, [ R9 ]  (where R9 is a bit mask, not an integer index)
+;			Note: These are req to reg ops; no memory fetches (other than instructions from pipeline)
+;
+GetZatMask	MACRO			dest, src, mask
+			LEA				RAX,  mask
+			KMOVB			k1, RAX
+			VPCOMPRESSQ		ZMM0 {k1}{z}, src
+			VMOVQ			dest, XMM0
+			ENDM
+
+;
+;			Set a GP Reg QWORD within a Z register as specified by mask
+;			Note: RAX and k1 are used and not restored
+;			Example usage: SetZatIdx ZMM1, R8, MaskBit2
+;			Note: These are req to reg ops; no memory fetches (other than instructions from pipeline)
+;
+SetZatMask	MACRO			dest, src, mask
+			LEA				RAX, mask
+			KMOVB			k1, RAX
+			VPBROADCASTQ 	dest {k1}, src
+			ENDM
 ENDIF
