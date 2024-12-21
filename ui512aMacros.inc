@@ -95,7 +95,8 @@ EXTERNDEF	sub_u:PROC
 EXTERNDEF	sub_uT64:PROC
 
 ;			Configuration choices
-__UseZ		EQU				1					; Use AVX4 processor features (512 bit registers and instructions)
+__PrefRegs	EQU				0
+__UseZ		EQU				1							; Use AVX4 processor features (512 bit registers and instructions)
 __UseY		EQU				0							; Use AVX2 processor features (256 bit registers and instructions)
 __UseX		EQU				0							; Use SIMD/SSE processor features (128 bit registers and instructions)
 __UseQ		EQU				0							; Do not use extensions, use standard x64 bit registers and instructions

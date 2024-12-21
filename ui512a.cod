@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler (x64) Version 14.42.34435.0   12/15/24 18:10:21
+Microsoft (R) Macro Assembler (x64) Version 14.42.34435.0   12/20/24 22:21:16
 ui512a.asm						     Page 1 - 1
 
 
@@ -101,7 +101,8 @@ ui512a.asm						     Page 1 - 1
 			      C EXTERNDEF	sub_uT64:PROC
 			      C 
 			      C ;			Configuration choices
- = 00000001		      C __UseZ		EQU				1					; Use AVX4 processor features (512 bit registers and instructions)
+ = 00000000		      C __PrefRegs	EQU				0
+ = 00000001		      C __UseZ		EQU				1							; Use AVX4 processor features (512 bit registers and instructions)
  = 00000000		      C __UseY		EQU				0							; Use AVX2 processor features (256 bit registers and instructions)
  = 00000000		      C __UseX		EQU				0							; Use SIMD/SSE processor features (128 bit registers and instructions)
  = 00000000		      C __UseQ		EQU				0							; Do not use extensions, use standard x64 bit registers and instructions
@@ -332,13 +333,14 @@ ui512a.asm						     Page 1 - 1
  0000004D  66| 3B C8					CMP				CX, AX
  00000050  B9 00000000					MOV				ECX, 0
  00000055  0F 44 C1					CMOVE			EAX, ECX
+
+					ELSEIF	__UseY
+					ENDIF
  00000058  B9 00000001					MOV				ECX, 1
  0000005D  0F 4F C1					CMOVG			EAX, ECX
  00000060  B9 FFFFFFFF					MOV				ECX, -1
  00000065  0F 4C C1					CMOVL			EAX, ECX
- 00000068  C3						RET
-					ELSEIF	__UseY
-					ENDIF
+ 00000068  C3						RET 
  00000069			compare_u	ENDP 
 
 
@@ -367,14 +369,13 @@ ui512a.asm						     Page 1 - 1
  00000097  66| 3B C8					CMP				CX, AX
  0000009A  B9 00000000					MOV				ECX, 0
  0000009F  0F 44 C1					CMOVE			EAX, ECX
+
 					ELSE
 					ENDIF
- 000000A2			checkGTLT:
  000000A2  B9 00000001					MOV				ECX, 1
  000000A7  0F 4F C1					CMOVG			EAX, ECX
  000000AA  B9 FFFFFFFF					MOV				ECX, -1
  000000AF  0F 4C C1					CMOVL			EAX, ECX
- 000000B2			done:
  000000B2  C3						RET
  000000B3			compare_uT64 ENDP
 
@@ -386,6 +387,9 @@ ui512a.asm						     Page 1 - 1
 				;			returns		-	zero for no carry, 1 for carry (overflow)
 				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
  000000B3			add_u		PROC			PUBLIC 
+					IF		__PrefRegs
+					ELSE
+
  000000B3  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]
  000000B7  49/ 03 40 38					ADD				RAX, [ R8 ] + [ 7 * 8 ]
  000000BB  48/ 89 41 38					MOV				[ RCX ] + [ 7 * 8 ], RAX
@@ -417,9 +421,12 @@ ui512a.asm						     Page 1 - 1
  0000011C  66| 49/ 0F 38 F6				ADCX			RAX, [ R8 ] + [ 0 * 8 ]
 	   00
  00000122  48/ 89 01					MOV				[ RCX ] + [ 0 * 8 ], RAX
- 00000125  B8 00000000					MOV				EAX, 0
+
+					ENDIF
+					
+ 00000125  B8 00000000					MOV				EAX, 0						; return carry flag as overflow
  0000012A  B9 00000001					MOV				ECX, 1
- 0000012F  0F 42 C1					CMOVC			EAX, ECX
+ 0000012F  0F 42 C1					CMOVC			EAX, ECX	
  00000132  C3						RET	
  00000133			add_u		ENDP 
 
@@ -538,7 +545,7 @@ ui512a.asm						     Page 1 - 1
  00000274			sub_uT64	ENDP 
 
 							END
-Microsoft (R) Macro Assembler (x64) Version 14.42.34435.0   12/15/24 18:10:21
+Microsoft (R) Macro Assembler (x64) Version 14.42.34435.0   12/20/24 22:21:16
 ui512a.asm						     Symbols 2 - 1
 
 
@@ -561,8 +568,6 @@ Procedures, parameters, and locals:
 add_uT64 . . . . . . . . . . . .	P 	 00000133 _TEXT	Length= 0000006B Public
 add_u  . . . . . . . . . . . . .	P 	 000000B3 _TEXT	Length= 00000080 Public
 compare_uT64 . . . . . . . . . .	P 	 00000069 _TEXT	Length= 0000004A Public
-  checkGTLT  . . . . . . . . . .	L 	 000000A2 _TEXT	
-  done . . . . . . . . . . . . .	L 	 000000B2 _TEXT	
 compare_u  . . . . . . . . . . .	P 	 0000002B _TEXT	Length= 0000003E Public
 copy_u . . . . . . . . . . . . .	P 	 0000000D _TEXT	Length= 0000000D Public
 set_uT64 . . . . . . . . . . . .	P 	 0000001A _TEXT	Length= 00000011 Public
@@ -596,6 +601,7 @@ W_PTR  . . . . . . . . . . . . .	Text   	 WORD PTR
 XM_PTR . . . . . . . . . . . . .	Text   	 XMMWORD PTR
 YM_PTR . . . . . . . . . . . . .	Text   	 YMMWORD PTR
 ZM_PTR . . . . . . . . . . . . .	Text   	 ZMMWORD PTR
+__PrefRegs . . . . . . . . . . .	Number	 00000000h   
 __UseQ . . . . . . . . . . . . .	Number	 00000000h   
 __UseX . . . . . . . . . . . . .	Number	 00000000h   
 __UseY . . . . . . . . . . . . .	Number	 00000000h   

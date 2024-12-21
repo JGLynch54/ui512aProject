@@ -103,11 +103,7 @@ compare_u	PROC			PUBLIC
 			CMP				CX, AX
 			MOV				ECX, 0
 			CMOVE			EAX, ECX
-			MOV				ECX, 1
-			CMOVG			EAX, ECX
-			MOV				ECX, -1
-			CMOVL			EAX, ECX
-			RET
+
 	ELSEIF	__UseY
 			VMOVDQA64		YMM0, YM_PTR [ RCX ] + [ 4 * 8 ]
 			VMOVDQA64		YMM1, YM_PTR [ RCX ] + [ 0 * 8 ]
@@ -128,11 +124,7 @@ compare_u	PROC			PUBLIC
 			CMP				EDX, EAX
 			MOV				ECX, 0
 			CMOVE			EAX, ECX
-			MOV				ECX, 1
-			CMOVG			EAX, ECX
-			MOV				ECX, -1
-			CMOVL			EAX, ECX
-			RET
+
 	ELSE
 			MOV				RAX, [ RCX ] + [ 0 * 8 ]
 			CMP				RAX, [ RDX ] + [ 0 * 8 ]
@@ -160,12 +152,13 @@ compare_u	PROC			PUBLIC
 			JNZ				checkGTLT
 			XOR				EAX, EAX
 checkGTLT:
+
+	ENDIF
 			MOV				ECX, 1
 			CMOVG			EAX, ECX
 			MOV				ECX, -1
 			CMOVL			EAX, ECX
 			RET 
-	ENDIF
 compare_u	ENDP 
 
 
@@ -189,6 +182,7 @@ compare_uT64 PROC			PUBLIC
 			CMP				CX, AX
 			MOV				ECX, 0
 			CMOVE			EAX, ECX
+
 	ELSE
 			XOR				RAX, RAX
 			CMP				Q_PTR [ RCX ] + [ 0 * 8 ], RAX
@@ -209,13 +203,13 @@ compare_uT64 PROC			PUBLIC
 			CMP				RAX, RDX 
 			JNZ				checkGTLT
 			XOR				EAX, EAX
-	ENDIF
 checkGTLT:
+
+	ENDIF
 			MOV				ECX, 1
 			CMOVG			EAX, ECX
 			MOV				ECX, -1
 			CMOVL			EAX, ECX
-done:
 			RET
 compare_uT64 ENDP
 
@@ -227,6 +221,98 @@ compare_uT64 ENDP
 ;			returns		-	zero for no carry, 1 for carry (overflow)
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 add_u		PROC			PUBLIC 
+	IF		__PrefRegs
+	;		PrefRegs : Prefer Registers
+	;		Testing whether reducing memory read / writes by using the ZMM registers as scratch memory is faster
+	;		This routine, and the correcsponding routine without the prefer regs setting, tests that premise
+
+	;		Preferring registers:
+	;			Load the two input 8-word values into two ZMM regs (one memory fetch for each (aligned))
+	;			Extract each corresponding addend word into GP regs, do the addition, put the sum into another Z reg
+	;			When finished with all eight, store the rsulting sum (memory write)
+	;			Other than the inital two loads, and the ending store, there are no memory ops, no bus ops, 
+	;			all ops are within the CPU and in theory at CPU clock speeds as opposed to bus / memory speeds
+	;			Unknowns: 
+	;						how big is the instruction pipeline? are we waiting for memory fetches for instructions?
+	;						How much clock downshifting occurs when using the ZMM regs (and instructions)?
+	;
+	;		After testing, using the Z regs in this way is significantly slower than using GP regs, even though many more memory accesses
+	;		Note: This is not using the Z regs for their intended purpose: SIMD; this is using them as awkward scratch registers
+	;				Using the Z regs for SIMD, such as in the compare: the Z (SIMD) approach is faster than GP approach
+
+
+			VMOVDQA64		ZMM28, ZM_PTR [ RDX ]
+			VMOVDQA64		ZMM29, ZM_PTR [ R8 ]
+
+			LEA				RAX, MaskBit7				; lowest order word ( 7 of 0-7 )
+			KMOVB			K1, RAX
+			VPCOMPRESSQ		ZMM0 {k1}{z}, ZMM28
+			VMOVQ			RAX, XMM0
+			VPCOMPRESSQ		ZMM1 {k1}{z}, ZMM29
+			VMOVQ			RDX, XMM1
+			ADD				RAX, RDX
+			VPBROADCASTQ 	ZMM30 {k1}, RAX
+
+			KSHIFTRB		K1, K1, 1					; 6 of 0-7
+			VPCOMPRESSQ		ZMM0 {k1}{z}, ZMM28
+			VMOVQ			RAX, XMM0
+			VPCOMPRESSQ		ZMM1 {k1}{z}, ZMM29
+			VMOVQ			RDX, XMM1
+			ADCX			RAX, RDX
+			VPBROADCASTQ 	ZMM30 {k1}, RAX
+
+			KSHIFTRB		K1, K1, 1					; 5 of 0-7
+			VPCOMPRESSQ		ZMM0 {k1}{z}, ZMM28
+			VMOVQ			RAX, XMM0
+			VPCOMPRESSQ		ZMM1 {k1}{z}, ZMM29
+			VMOVQ			RDX, XMM1
+			ADCX			RAX, RDX
+			VPBROADCASTQ 	ZMM30 {k1}, RAX
+
+			KSHIFTRB		K1, K1, 1					; 4 of 0-7
+			VPCOMPRESSQ		ZMM0 {k1}{z}, ZMM28
+			VMOVQ			RAX, XMM0
+			VPCOMPRESSQ		ZMM1 {k1}{z}, ZMM29
+			VMOVQ			RDX, XMM1
+			ADCX			RAX, RDX
+			VPBROADCASTQ 	ZMM30 {k1}, RAX
+
+			KSHIFTRB		K1, K1, 1					; 3 of 0-7
+			VPCOMPRESSQ		ZMM0 {k1}{z}, ZMM28
+			VMOVQ			RAX, XMM0
+			VPCOMPRESSQ		ZMM1 {k1}{z}, ZMM29
+			VMOVQ			RDX, XMM1
+			ADCX			RAX, RDX
+			VPBROADCASTQ 	ZMM30 {k1}, RAX
+
+			KSHIFTRB		K1, K1, 1					; 2 of 0-7
+			VPCOMPRESSQ		ZMM0 {k1}{z}, ZMM28
+			VMOVQ			RAX, XMM0
+			VPCOMPRESSQ		ZMM1 {k1}{z}, ZMM29
+			VMOVQ			RDX, XMM1
+			ADCX			RAX, RDX
+			VPBROADCASTQ 	ZMM30 {k1}, RAX
+
+			KSHIFTRB		K1, K1, 1					; 1 of 0-7
+			VPCOMPRESSQ		ZMM0 {k1}{z}, ZMM28
+			VMOVQ			RAX, XMM0
+			VPCOMPRESSQ		ZMM1 {k1}{z}, ZMM29
+			VMOVQ			RDX, XMM1
+			ADCX			RAX, RDX
+			VPBROADCASTQ 	ZMM30 {k1}, RAX
+
+			KSHIFTRB		K1, K1, 1					; 0 of 0-7
+			VPCOMPRESSQ		ZMM0 {k1}{z}, ZMM28
+			VMOVQ			RAX, XMM0
+			VPCOMPRESSQ		ZMM1 {k1}{z}, ZMM29
+			VMOVQ			RDX, XMM1
+			ADCX			RAX, RDX
+			VPBROADCASTQ 	ZMM30 {k1}, RAX
+
+			VMOVDQA64		ZM_PTR [ RCX ], ZMM30		; store result
+
+	ELSE
+
 			MOV				RAX, [ RDX ] + [ 7 * 8 ]
 			ADD				RAX, [ R8 ] + [ 7 * 8 ]
 			MOV				[ RCX ] + [ 7 * 8 ], RAX
@@ -251,9 +337,12 @@ add_u		PROC			PUBLIC
 			MOV				RAX, [ RDX ] + [ 0 * 8 ]
 			ADCX			RAX, [ R8 ] + [ 0 * 8 ]
 			MOV				[ RCX ] + [ 0 * 8 ], RAX
-			MOV				EAX, 0
+
+	ENDIF
+	
+			MOV				EAX, 0						; return carry flag as overflow
 			MOV				ECX, 1
-			CMOVC			EAX, ECX
+			CMOVC			EAX, ECX	
 			RET	
 add_u		ENDP 
 
