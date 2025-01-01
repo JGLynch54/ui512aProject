@@ -49,6 +49,7 @@
 .list
 IFNDEF			ui512aMacros_INC
 ui512aMacros_INC EQU		<1>
+
 ;           header file equivalent extern declarations
 ;			EXTERN "C" signatures (from ui512a.asm)
 
@@ -146,10 +147,12 @@ CPGT		EQU				6
 ;===========================================================================================
 ;          Local macros
 ;===========================================================================================
-Zero512		MACRO			dest
+
 ;
 ;			Zero a 512 bit destination, conditional assembly based on configuration parameters
 ;
+
+Zero512		MACRO			dest
 	IF		__UseZ
 			VPXORQ			ZMM31, ZMM31, ZMM31
 			VMOVDQA64		ZM_PTR [ dest ], ZMM31
@@ -176,10 +179,12 @@ Zero512		MACRO			dest
 	ENDIF
 			ENDM
 
-Copy512		MACRO			dest, src
+
 ;
 ;			Copy a 512 bit source to destination, conditional assembly based on configuration parameters
 ;
+
+Copy512		MACRO			dest, src
 	IF		__UseZ
 			VMOVDQA64		ZMM31, ZM_PTR [ src ]
 			VMOVDQA64		ZM_PTR [ dest ], ZMM31
@@ -220,6 +225,7 @@ Copy512		MACRO			dest, src
 ;
 ;			Mask values (for k reg) used to select particulare QWORDS from X, Y, or Z simd regs
 ;
+
 MaskBit0	EQU				B_PTR [ 00000001b ]
 MaskBit1	EQU				B_PTR [ 00000010b ]
 MaskBit2	EQU				B_PTR [ 00000100b ]
@@ -235,6 +241,7 @@ MaskBit7	EQU				B_PTR [ 10000000b ]
 ;			Example usage: GetZatIdx R11, ZMM1, MaskBit2 or SetZatIdx ZMM1, R12, [ R9 ]  (where R9 is a bit mask, not an integer index)
 ;			Note: These are req to reg ops; no memory fetches (other than instructions from pipeline)
 ;
+
 GetZatMask	MACRO			dest, src, mask
 			LEA				RAX,  mask
 			KMOVB			k1, RAX
@@ -248,6 +255,7 @@ GetZatMask	MACRO			dest, src, mask
 ;			Example usage: SetZatIdx ZMM1, R8, MaskBit2
 ;			Note: These are req to reg ops; no memory fetches (other than instructions from pipeline)
 ;
+
 SetZatMask	MACRO			dest, src, mask
 			LEA				RAX, mask
 			KMOVB			k1, RAX

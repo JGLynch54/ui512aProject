@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler (x64) Version 14.42.34435.0   12/20/24 22:21:16
+Microsoft (R) Macro Assembler (x64) Version 14.42.34435.0   01/01/25 14:26:31
 ui512a.asm						     Page 1 - 1
 
 
@@ -55,6 +55,7 @@ ui512a.asm						     Page 1 - 1
 			      C .list
 			      C IFNDEF			ui512aMacros_INC
  = 1			      C ui512aMacros_INC EQU		<1>
+			      C 
 			      C ;           header file equivalent extern declarations
 			      C ;			EXTERN "C" signatures (from ui512a.asm)
 			      C 
@@ -152,10 +153,12 @@ ui512a.asm						     Page 1 - 1
 			      C ;===========================================================================================
 			      C ;          Local macros
 			      C ;===========================================================================================
-			      C Zero512		MACRO			dest
+			      C 
 			      C ;
 			      C ;			Zero a 512 bit destination, conditional assembly based on configuration parameters
 			      C ;
+			      C 
+			      C Zero512		MACRO			dest
 			      C 	IF		__UseZ
 			      C 			VPXORQ			ZMM31, ZMM31, ZMM31
 			      C 			VMOVDQA64		ZM_PTR [ dest ], ZMM31
@@ -182,10 +185,12 @@ ui512a.asm						     Page 1 - 1
 			      C 	ENDIF
 			      C 			ENDM
 			      C 
-			      C Copy512		MACRO			dest, src
+			      C 
 			      C ;
 			      C ;			Copy a 512 bit source to destination, conditional assembly based on configuration parameters
 			      C ;
+			      C 
+			      C Copy512		MACRO			dest, src
 			      C 	IF		__UseZ
 			      C 			VMOVDQA64		ZMM31, ZM_PTR [ src ]
 			      C 			VMOVDQA64		ZM_PTR [ dest ], ZMM31
@@ -226,6 +231,7 @@ ui512a.asm						     Page 1 - 1
 			      C ;
 			      C ;			Mask values (for k reg) used to select particulare QWORDS from X, Y, or Z simd regs
 			      C ;
+			      C 
  = 00000001		      C MaskBit0	EQU				B_PTR [ 00000001b ]
  = 00000002		      C MaskBit1	EQU				B_PTR [ 00000010b ]
  = 00000004		      C MaskBit2	EQU				B_PTR [ 00000100b ]
@@ -241,6 +247,7 @@ ui512a.asm						     Page 1 - 1
 			      C ;			Example usage: GetZatIdx R11, ZMM1, MaskBit2 or SetZatIdx ZMM1, R12, [ R9 ]  (where R9 is a bit mask, not an integer index)
 			      C ;			Note: These are req to reg ops; no memory fetches (other than instructions from pipeline)
 			      C ;
+			      C 
 			      C GetZatMask	MACRO			dest, src, mask
 			      C 			LEA				RAX,  mask
 			      C 			KMOVB			k1, RAX
@@ -254,6 +261,7 @@ ui512a.asm						     Page 1 - 1
 			      C ;			Example usage: SetZatIdx ZMM1, R8, MaskBit2
 			      C ;			Note: These are req to reg ops; no memory fetches (other than instructions from pipeline)
 			      C ;
+			      C 
 			      C SetZatMask	MACRO			dest, src, mask
 			      C 			LEA				RAX, mask
 			      C 			KMOVB			k1, RAX
@@ -545,7 +553,7 @@ ui512a.asm						     Page 1 - 1
  00000274			sub_uT64	ENDP 
 
 							END
-Microsoft (R) Macro Assembler (x64) Version 14.42.34435.0   12/20/24 22:21:16
+Microsoft (R) Macro Assembler (x64) Version 14.42.34435.0   01/01/25 14:26:31
 ui512a.asm						     Symbols 2 - 1
 
 

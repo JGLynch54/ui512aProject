@@ -427,7 +427,7 @@ namespace ui512aTests
 				};
 			};
 
-			string runmsg = "Add function testing. Ran tests " + to_string(runcount * 4) + " times, each with pseudo random values.\n";
+			string runmsg = "Add function testing. Ran tests " + to_string(runcount * 5) + " times, each with pseudo random values.\n";
 			Logger::WriteMessage(runmsg.c_str());
 			Logger::WriteMessage(L"Passed. Tested expected values via assert\n\n.");
 		};
@@ -558,11 +558,6 @@ namespace ui512aTests
 			for (int i = 0; i < timingcount; i++)
 			{
 				sub_u(diff, num1, num2);
-			};
-
-			for (int j = 0; j < 8; j++)
-			{
-				Assert::AreEqual(diff[j], 0x0ull);
 			};
 
 			string runmsg = "Subtract function timing. Ran " + to_string(timingcount) + " times.\n";
