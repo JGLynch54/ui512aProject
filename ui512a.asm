@@ -128,30 +128,30 @@ compare_u	PROC			PUBLIC
 	ELSE
 			MOV				RAX, [ RCX ] + [ 0 * 8 ]
 			CMP				RAX, [ RDX ] + [ 0 * 8 ]
-			JNZ				checkGTLT
+			JNZ				@F
 			MOV				RAX, [ RCX ] + [ 1 * 8 ]
 			CMP				RAX, [ RDX ] + [ 1 * 8 ]
-			JNZ				checkGTLT
+			JNZ				@F
 			MOV				RAX, [ RCX ] + [ 2 * 8 ]
 			CMP				RAX, [ RDX ] + [ 2 * 8 ]
-			JNZ				checkGTLT
+			JNZ				@F
 			MOV				RAX, [ RCX ] + [ 3 * 8 ]
 			CMP				RAX, [ RDX ] + [ 3 * 8 ]
-			JNZ				checkGTLT
+			JNZ				@F
 			MOV				RAX, [ RCX ] + [ 4 * 8 ]
 			CMP				RAX, [ RDX ] + [ 4 * 8 ]
-			JNZ				checkGTLT
+			JNZ				@F
 			MOV				RAX, [ RCX ] + [ 5 * 8 ]
 			CMP				RAX, [ RDX ] + [ 5 * 8 ]
-			JNZ				checkGTLT
+			JNZ				@F
 			MOV				RAX, [ RCX ] + [ 6 * 8 ]
 			CMP				RAX, [ RDX ] + [ 6 * 8 ]
-			JNZ				checkGTLT
+			JNZ				@F
 			MOV				RAX, [ RCX ] + [ 7 * 8 ]
 			CMP				RAX, [ RDX ] + [ 7 * 8 ]
-			JNZ				checkGTLT
+			JNZ				@F
 			XOR				EAX, EAX
-checkGTLT:
+@@:
 
 	ENDIF
 			MOV				ECX, 1
@@ -186,24 +186,24 @@ compare_uT64 PROC			PUBLIC
 	ELSE
 			XOR				RAX, RAX
 			CMP				Q_PTR [ RCX ] + [ 0 * 8 ], RAX
-			JNZ				checkGTLT
+			JNZ				@F
 			CMP				Q_PTR [ RCX ] + [ 1 * 8 ], RAX
-			JNZ				checkGTLT
+			JNZ				@F
 			CMP				Q_PTR [ RCX]  + [ 2 * 8 ], RAX
-			JNZ				checkGTLT
+			JNZ				@F
 			CMP				Q_PTR [ RCX ] + [ 3 * 8 ], RAX
-			JNZ				checkGTLT
+			JNZ				@F
 			CMP				Q_PTR [ RCX ] + [ 4 * 8 ], RAX
-			JNZ				checkGTLT
+			JNZ				@F
 			CMP				Q_PTR [ RCX ] + [ 5 * 8 ], RAX
-			JNZ				checkGTLT
+			JNZ				@F
 			CMP				Q_PTR [ RCX ] + [ 6 * 8 ], RAX
-			JNZ				checkGTLT	
+			JNZ				@F	
 			MOV				RAX, [ RCX ] + [ 7 * 8 ]
 			CMP				RAX, RDX 
-			JNZ				checkGTLT
+			JNZ				@F
 			XOR				EAX, EAX
-checkGTLT:
+@@:
 
 	ENDIF
 			MOV				ECX, 1
