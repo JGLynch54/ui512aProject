@@ -124,6 +124,7 @@
     <MASM>
       <EnableAssemblyGeneratedCodeListing>true</EnableAssemblyGeneratedCodeListing>
       <AssembledCodeListingFile>$(SolutionDir)%(FileName).cod</AssembledCodeListingFile>
+      <AdditionalOptions>/Sc %(AdditionalOptions)</AdditionalOptions>
     </MASM>
     <Lib />
     <Lib>

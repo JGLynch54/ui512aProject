@@ -1,6 +1,8 @@
 ;
 ;			ui512a
 ;
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------
+;
 ;			File:			ui512a.asm
 ;			Author:			John G. Lynch
 ;			Legal:			Copyright @2024, per MIT License below
@@ -8,20 +10,29 @@
 ;
 ;			Notes:
 ;				ui512 is a small project to provide basic operations for a variable type of unsigned 512 bit integer.
-;				The basic operations: zero, copy, compare, add, subtract.
-;               Other optional modules provide bit ops and multiply / divide.
+;
+;				ui512a provides basic operations: zero, copy, compare, add, subtract.
+;				ui512b provides basic bit-oriented operations: shift left, shift right, and, or, not, least significant bit and most significant bit.
+;               ui512md provides multiply and divide.
+;
 ;				It is written in assembly language, using the MASM (ml64) assembler provided as an option within Visual Studio.
 ;				(currently using VS Community 2022 17.9.6)
+;
 ;				It provides external signatures that allow linkage to C and C++ programs,
 ;				where a shell/wrapper could encapsulate the methods as part of an object.
+;
 ;				It has assembly time options directing the use of Intel processor extensions: AVX4, AVX2, SIMD, or none:
 ;				(Z (512), Y (256), or X (128) registers, or regular Q (64bit)).
+;
 ;				If processor extensions are used, the caller must align the variables declared and passed
 ;				on the appropriate byte boundary (e.g. alignas 64 for 512)
+;
 ;				This module is very light-weight (less than 1K bytes) and relatively fast,
 ;				but is not intended for all processor types or all environments. 
-;				Use for private (hobbyist), or instructional,
-;				or as an example for more ambitious projects is all it is meant to be.
+;
+;				Use for private (hobbyist), or instructional, or as an example for more ambitious projects is all it is meant to be.
+;
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;
 ;			MIT License
 ;
@@ -45,52 +56,63 @@
 ;				OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;				SOFTWARE.
 ;
+;
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 			INCLUDE			ui512aMacros.inc
 			OPTION			casemap:none
 .CODE
 			OPTION			PROLOGUE:none
 			OPTION			EPILOGUE:none
-
+;
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;			zero_u		-	fill supplied 512bit (8 QWORDS) with zero
 ;			Prototype:		extern "C" void zero_u ( u64* destarr );
 ;			destarr		-	Address of destination 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
 ;			returns		-	nothing
+;
+
 zero_u		PROC			PUBLIC
 			Zero512			RCX
 			RET		
 zero_u		ENDP 
 
-
+;
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;			copy_u		-	copy supplied 512bit (8 QWORDS) source to supplied destination
 ;			Prototype:		extern "C" void copy_u( u64* destarr, u64* srcarr )
 ;			destarr		-	Address of destination 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
 ;			srcarr		-	Address of source 64 byte aligned array of 8 64-bit QWORDS (512 bits) in RDX
 ;			returns		-	nothing
+
 copy_u		PROC			PUBLIC
 			Copy512			RCX, RDX
 			RET	
 copy_u		ENDP
 
-
+;
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;			setuT64		-	set supplied destination 512 bit to supplied u64 value
 ;			Prototype:		extern "C" void set_uT64( u64* destarr, u64 value )
 ;			destarr		-	Address of destination 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
 ;			src			-	u64 value in RDX
 ;			returns		-	nothing
+
 set_uT64	PROC			PUBLIC
 			Zero512			RCX	
 			MOV				Q_PTR [ RCX ] + [ 7 * 8 ], RDX
 			RET	
 set_uT64	ENDP
 
-
+;
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;			compare_u	-	compare supplied 512bit (8 QWORDS) LH operand to supplied RH operand
 ;			Prototype:		extern "C" s32 compare_u( u64* lh_op, u64* rh_op )
 ;			lh_op		-	Address of LH 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
 ;			rh_op		-	Address of RH 64 byte aligned array of 8 64-bit QWORDS (512 bits) in RDX
 ;			returns		-	(0) for equal, -1 for less than, 1 for greater than
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
+
 compare_u	PROC			PUBLIC
 
 	IF		__UseZ
@@ -161,13 +183,15 @@ compare_u	PROC			PUBLIC
 			RET 
 compare_u	ENDP 
 
-
+;
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;			compare_uT64-	compare supplied 512bit (8 QWORDS) LH operand to supplied 64bit RH operand
 ;			Prototype:		extern "C" s32 compare_uT64( u64* lh_op, u64 rh_op )
 ;			lh_op		-	Address of LH 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
 ;			rh_op		-	The RH 64-bit value in RDX
 ;			returns		-	(0) for equal, -1 for less than, 1 for greater than
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
+
 compare_uT64 PROC			PUBLIC
 
 	IF		__UseZ
@@ -213,6 +237,8 @@ compare_uT64 PROC			PUBLIC
 			RET
 compare_uT64 ENDP
 
+;
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;			add_u		-	add supplied 512bit (8 QWORDS) sources to supplied destination
 ;			Prototype:		extern "C" s32 add_u( u64* sum, u64* addend1, u64* addend2 )
 ;			sum			-	Address of 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
@@ -220,6 +246,7 @@ compare_uT64 ENDP
 ;			addend2		-	Address of  the 64 byte aligned array of 8 64-bit QWORDS (512 bits) in R8
 ;			returns		-	zero for no carry, 1 for carry (overflow)
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
+
 add_u		PROC			PUBLIC 
 	IF		__PrefRegs
 	;		PrefRegs : Prefer Registers
@@ -346,6 +373,8 @@ add_u		PROC			PUBLIC
 			RET	
 add_u		ENDP 
 
+;
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;			add_uT64	-	add supplied 64bit QWORD (value) to 512bit (8 QWORDS), place in supplied destination
 ;			Prototype:		extern "C" s32 add_uT64( u64* sum, u64* addend1, u64 addend2 )
 ;			sum			-	Address of 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
@@ -353,6 +382,7 @@ add_u		ENDP
 ;			addend2		-	The 64-bit value in R8
 ;			returns		-	zero for no carry, 1 for carry (overflow)
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
+
 add_uT64	PROC			PUBLIC 
 			MOV				RAX, [ RDX ] + [ 7 * 8 ]
 			ADD				RAX, R8 
@@ -383,7 +413,8 @@ add_uT64	PROC			PUBLIC
 			CMOVC			EAX, ECX
 			RET	
 add_uT64	ENDP 
-
+;
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;			sub_u		-	subtract supplied 512bit (8 QWORDS) RH OP from LH OP giving difference in destination
 ;			Prototype:		extern "C" s32 sub_u( u64* difference, u64* left operand, u64* right operand )
 ;			difference	-	Address of 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
@@ -391,6 +422,7 @@ add_uT64	ENDP
 ;			rh_op		-	Address of the RHOP 8 64-bit QWORDS (512 bits) in R8
 ;			returns		-	zero for no borrow, 1 for borrow (underflow)
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
+
 sub_u		PROC			PUBLIC 
 			MOV				RAX, [ RDX ] + [ 7 * 8 ]
 			SUB				RAX, [ R8 ] + [ 7 * 8 ]
@@ -422,6 +454,8 @@ sub_u		PROC			PUBLIC
 			RET
 sub_u		ENDP 
 
+;
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;			sub_uT64	-	subtract supplied 64 bit right hand (64 bit value) op from left hand (512 bit) giving difference
 ;			Prototype:		extern "C" s32 sub_uT64( u64* difference, u64* left operand, u64 right operand )
 ;			difference	-	Address of 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
@@ -429,6 +463,7 @@ sub_u		ENDP
 ;			rh_op		-	64-bitvalue in R8
 ;			returns		-	zero for no borrow, 1 for borrow (underflow)
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
+
 sub_uT64	PROC			PUBLIC 
 			MOV				RAX, [ RDX ] + [ 7 * 8 ]
 			SUB				RAX, R8

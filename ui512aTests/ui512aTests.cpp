@@ -69,9 +69,13 @@ namespace ui512aTests
 			u64 seed = 0;
 			const u32 dec = 10;
 			u32 dist[dec]{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+
 			const u64 split = 9223372036854775807ull / dec;
 			u32 distc = 0;
+			float varsum = 0.0;
 			float deviation = 0.0;
+			float D = 0.0;
+			float sumD = 0.0;
 			float varience = 0.0;
 			const u32 randomcount = 1000000;
 			const s32 norm = randomcount / dec;
@@ -87,20 +91,31 @@ namespace ui512aTests
 			msgd += format("Distribution of numbers accross the deciles indicates the quality of the generator.\n\n");
 			msgd += "Distribution by decile:";
 			string msgv = "Variance from mean:\t";
+			string msgchi = "Varience ^2 (chi):\t";
 
 			for (int i = 0; i < 10; i++)
 			{
 				deviation = float(abs(long(norm) - long(dist[i])));
+				D = (deviation * deviation) / float(long(norm));
+				sumD += D;
 				varience = float(deviation) / float(norm) * 100.0f;
+				varsum += varience;
 				msgd += format("\t{:6d}", dist[i]);
 				msgv += format("\t{:5.3f}% ", varience);
+				msgchi += format("\t{:5.3f}% ", D);
 				distc += dist[i];
 			};
 
 			msgd += "\t\tDecile counts sum to: " + to_string(distc) + "\n";
 			Logger::WriteMessage(msgd.c_str());
+			msgv += "\t\tVarience sums to: ";
+			msgv += format("\t{:6.3f}% ", varsum);
 			msgv += '\n';
 			Logger::WriteMessage(msgv.c_str());
+			msgchi += "\t\tChi distribution: ";
+			msgchi += format("\t{:6.3f}% ", sumD);
+			msgchi += '\n';
+			Logger::WriteMessage(msgchi.c_str());
 		};
 
 		TEST_METHOD(ui512a_01_zero)
