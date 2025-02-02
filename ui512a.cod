@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler (x64) Version 14.42.34436.0   02/02/25 12:46:07
+Microsoft (R) Macro Assembler (x64) Version 14.42.34436.0   02/02/25 13:08:30
 ui512a.asm						     Page 1 - 1
 
 
@@ -429,30 +429,37 @@ ui512a.asm						     Page 1 - 1
  000000B3  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]
  000000B7  49/ 03 40 38					ADD				RAX, [ R8 ] + [ 7 * 8 ]
  000000BB  48/ 89 41 38					MOV				[ RCX ] + [ 7 * 8 ], RAX
+
  000000BF  48/ 8B 42 30					MOV				RAX, [ RDX ] + [ 6 * 8 ]
  000000C3  66| 49/ 0F 38 F6				ADCX			RAX, [ R8 ] + [ 6 * 8 ]
 	   40 30
  000000CA  48/ 89 41 30					MOV				[ RCX ] + [ 6 * 8 ] , RAX
+
  000000CE  48/ 8B 42 28					MOV				RAX, [ RDX ] + [ 5 * 8 ]
  000000D2  66| 49/ 0F 38 F6				ADCX			RAX, [ R8 ] + [ 5 * 8 ]
 	   40 28
  000000D9  48/ 89 41 28					MOV				[ RCX ] + [ 5 * 8 ], RAX
+
  000000DD  48/ 8B 42 20					MOV				RAX, [ RDX ] + [ 4 * 8 ]
  000000E1  66| 49/ 0F 38 F6				ADCX			RAX, [ R8 ] + [ 4 * 8 ]
 	   40 20
  000000E8  48/ 89 41 20					MOV				[ RCX ] + [ 4 * 8 ], RAX
+
  000000EC  48/ 8B 42 18					MOV				RAX, [ RDX ] + [ 3 * 8 ]
  000000F0  66| 49/ 0F 38 F6				ADCX			RAX, [ R8 ] + [ 3 * 8 ]
 	   40 18
  000000F7  48/ 89 41 18					MOV				[ RCX ] + [ 3 * 8 ], RAX
+
  000000FB  48/ 8B 42 10					MOV				RAX, [ RDX ] + [ 2 * 8 ]
  000000FF  66| 49/ 0F 38 F6				ADCX			RAX, [ R8 ] + [ 2 * 8 ]
 	   40 10
  00000106  48/ 89 41 10					MOV				[ RCX ] + [ 2 * 8 ], RAX
+
  0000010A  48/ 8B 42 08					MOV				RAX, [ RDX ] + [ 1 * 8 ]
  0000010E  66| 49/ 0F 38 F6				ADCX			RAX, [ R8 ] + [ 1 * 8 ]
 	   40 08
  00000115  48/ 89 41 08					MOV				[ RCX ] + [ 1 * 8 ], RAX
+
  00000119  48/ 8B 02					MOV				RAX, [ RDX ] + [ 0 * 8 ]
  0000011C  66| 49/ 0F 38 F6				ADCX			RAX, [ R8 ] + [ 0 * 8 ]
 	   00
@@ -480,27 +487,35 @@ ui512a.asm						     Page 1 - 1
  00000133  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]
  00000137  49/ 03 C0					ADD				RAX, R8 
  0000013A  48/ 89 41 38					MOV				[ RCX ] + [ 7 * 8 ], RAX
+
  0000013E  48/ 8B 42 30					MOV				RAX, [ RDX ] + [ 6 * 8 ]
  00000142  48/ 83 D0 00					ADC				RAX, 0
  00000146  48/ 89 41 30					MOV				[ RCX ] + [ 6 * 8 ], RAX
+
  0000014A  48/ 8B 42 28					MOV				RAX, [ RDX ] + [ 5 * 8 ]
  0000014E  48/ 83 D0 00					ADC				RAX, 0
  00000152  48/ 89 41 28					MOV				[ RCX ] + [ 5 * 8 ], RAX
+
  00000156  48/ 8B 42 20					MOV				RAX, [ RDX ] + [ 4 * 8 ]
  0000015A  48/ 83 D0 00					ADC				RAX, 0
  0000015E  48/ 89 41 20					MOV				[ RCX ] + [ 4 * 8 ], RAX
+
  00000162  48/ 8B 42 18					MOV				RAX, [ RDX ] + [ 3 * 8 ]
  00000166  48/ 83 D0 00					ADC				RAX, 0
  0000016A  48/ 89 41 18					MOV				[ RCX ] + [ 3 * 8 ], RAX
+
  0000016E  48/ 8B 42 10					MOV				RAX, [ RDX ] + [ 2 * 8 ]
  00000172  48/ 83 D0 00					ADC				RAX, 0
  00000176  48/ 89 41 10					MOV				[ RCX ] + [ 2 * 8 ], RAX
+
  0000017A  48/ 8B 42 08					MOV				RAX, [ RDX ] + [ 1 * 8 ]
  0000017E  48/ 83 D0 00					ADC				RAX, 0
  00000182  48/ 89 41 08					MOV				[ RCX ] + [ 1 * 8 ], RAX
+
  00000186  48/ 8B 02					MOV				RAX, [ RDX ] + [ 0 * 8 ]
  00000189  48/ 83 D0 00					ADC				RAX, 0
  0000018D  48/ 89 01					MOV				[ RCX ] + [ 0 * 8 ], RAX
+
  00000190  B8 00000000					MOV				EAX, 0
  00000195  B9 00000001					MOV				ECX, 1
  0000019A  0F 42 C1					CMOVC			EAX, ECX
@@ -517,31 +532,40 @@ ui512a.asm						     Page 1 - 1
 				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 
  0000019E			sub_u		PROC			PUBLIC 
- 0000019E  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]
- 000001A2  49/ 2B 40 38					SUB				RAX, [ R8 ] + [ 7 * 8 ]
- 000001A6  48/ 89 41 38					MOV				[ RCX ] + [ 7 * 8 ], RAX
- 000001AA  48/ 8B 42 30					MOV				RAX, [ RDX ] + [ 6 * 8]
+
+ 0000019E  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]		; get last word of minuend (least significant word of the number we are subtracting from) (left-hand operand)
+ 000001A2  49/ 2B 40 38					SUB				RAX, [ R8 ] + [ 7 * 8 ]			; subtract last word of subrahend (the number to be subtracted) (right-hand operand)
+ 000001A6  48/ 89 41 38					MOV				[ RCX ] + [ 7 * 8 ], RAX		; store result in last word of difference, note: the flag 'carry' has been set to whether there has been a 'borrow'
+
+ 000001AA  48/ 8B 42 30					MOV				RAX, [ RDX ] + [ 6 * 8]			; same as above for next word, but use 'sbb' to bring the 'borrow' to this op
  000001AE  49/ 1B 40 30					SBB				RAX, [ R8 ] + [ 6 * 8 ]
  000001B2  48/ 89 41 30					MOV				[ RCX ] + [ 6 * 8 ], RAX
+
  000001B6  48/ 8B 42 28					MOV				RAX, [ RDX ] + [ 5 * 8 ]
  000001BA  49/ 1B 40 28					SBB				RAX, [ R8 ] + [ 5 * 8 ]
  000001BE  48/ 89 41 28					MOV				[ RCX ] + [ 5 * 8 ], RAX
+
  000001C2  48/ 8B 42 20					MOV				RAX, [ RDX ] + [ 4 * 8 ]
  000001C6  49/ 1B 40 20					SBB				RAX, [ R8 ] + [ 4 * 8 ]
  000001CA  48/ 89 41 20					MOV				[ RCX ] + [ 4 * 8 ], RAX
+
  000001CE  48/ 8B 42 18					MOV				RAX, [ RDX ] + [ 3 * 8 ]
  000001D2  49/ 1B 40 18					SBB				RAX, [ R8 ] + [ 3 * 8 ]
  000001D6  48/ 89 41 18					MOV				[ RCX ] + [ 3 * 8 ], RAX
+
  000001DA  48/ 8B 42 10					MOV				RAX, [ RDX ] + [ 2 * 8 ]
  000001DE  49/ 1B 40 10					SBB				RAX, [ R8 ] + [ 2 * 8 ]
  000001E2  48/ 89 41 10					MOV				[ RCX ] + [ 2 * 8 ], RAX
+
  000001E6  48/ 8B 42 08					MOV				RAX, [ RDX ] + [ 1 * 8 ]
  000001EA  49/ 1B 40 08					SBB 			RAX, [ R8 ] + [ 1 * 8 ]
  000001EE  48/ 89 41 08					MOV				[ RCX ] + [ 1 * 8 ], RAX
+
  000001F2  48/ 8B 02					MOV				RAX, [ RDX ] + [ 0 * 8 ]
  000001F5  49/ 1B 00					SBB				RAX, [ R8 ] + [ 0 * 8 ]
  000001F8  48/ 89 01					MOV				[ RCX ] + [ 0 * 8 ], RAX
- 000001FB  B8 00000000					MOV				EAX, 0
+
+ 000001FB  B8 00000000					MOV				EAX, 0							; return, set return code to zero if no remaining borrow, to one if there is a borrow
  00000200  B9 00000001					MOV				ECX, 1
  00000205  0F 42 C1					CMOVC			EAX, ECX
  00000208  C3						RET
@@ -555,33 +579,42 @@ ui512a.asm						     Page 1 - 1
 				;			lh_op		-	Address of  the 64 byte aligned array of 8 64-bit QWORDS (512 bits) in RDX
 				;			rh_op		-	64-bitvalue in R8
 				;			returns		-	zero for no borrow, 1 for borrow (underflow)
-				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
+;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 
  00000209			sub_uT64	PROC			PUBLIC 
- 00000209  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]
+
+ 00000209  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]		; 
  0000020D  49/ 2B C0					SUB				RAX, R8
  00000210  48/ 89 41 38					MOV				[ RCX ] + [ 7 * 8 ], RAX
+
  00000214  48/ 8B 42 30					MOV				RAX, [ RDX ] + [ 6 * 8 ] 
  00000218  48/ 83 D8 00					SBB				RAX, 0
  0000021C  48/ 89 41 30					MOV				[ RCX ] + [ 6 * 8 ], RAX
+
  00000220  48/ 8B 42 28					MOV				RAX, [ RDX ] + [ 5 * 8 ]
  00000224  48/ 83 D8 00					SBB				RAX, 0
  00000228  48/ 89 41 28					MOV				[ RCX ] + [ 5 * 8 ], RAX
+
  0000022C  48/ 8B 42 20					MOV				RAX, [ RDX ] + [ 4 * 8 ]
  00000230  48/ 83 D8 00					SBB				RAX, 0
  00000234  48/ 89 41 20					MOV				[ RCX ] + [ 4 * 8 ], RAX
+
  00000238  48/ 8B 42 18					MOV				RAX, [ RDX ] + [ 3 * 8 ]
  0000023C  48/ 83 D8 00					SBB				RAX, 0
  00000240  48/ 89 41 18					MOV				[ RCX ] + [ 3 * 8 ], RAX
+
  00000244  48/ 8B 42 10					MOV				RAX, [ RDX ] + [ 2 * 8 ]
  00000248  48/ 83 D8 00					SBB				RAX, 0
  0000024C  48/ 89 41 10					MOV				[ RCX ] + [ 2 * 8 ], RAX
+
  00000250  48/ 8B 42 08					MOV				RAX, [ RDX ] + [ 1 * 8 ]
  00000254  48/ 83 D8 00					SBB 			RAX, 0
  00000258  48/ 89 41 08					MOV				[ RCX ] + [ 1 * 8 ], RAX
+
  0000025C  48/ 8B 02					MOV				RAX, [ RDX ] + [ 0 * 8 ]
  0000025F  48/ 83 D8 00					SBB				RAX, 0
  00000263  48/ 89 01					MOV				[ RCX ] + [ 0 * 8 ], RAX
+
  00000266  B8 00000000					MOV				EAX, 0
  0000026B  B9 00000001					MOV				ECX, 1
  00000270  0F 42 C1					CMOVC			EAX, ECX
@@ -589,7 +622,7 @@ ui512a.asm						     Page 1 - 1
  00000274			sub_uT64	ENDP 
 
 							END
-Microsoft (R) Macro Assembler (x64) Version 14.42.34436.0   02/02/25 12:46:07
+Microsoft (R) Macro Assembler (x64) Version 14.42.34436.0   02/02/25 13:08:30
 ui512a.asm						     Symbols 2 - 1
 
 

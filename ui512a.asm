@@ -366,18 +366,25 @@ add_u		PROC			PUBLIC
 
 			MOV				R8, [ RDX ] + [ 7 * 8 ]
 			ADD				R8, [ RBX ] + [ 7 * 8 ]
+
 			MOV				R9, [ RDX ] + [ 6 * 8 ]
 			ADCX			R9, [ RBX ] + [ 6 * 8 ]
+
 			MOV				R10, [ RDX ] + [ 5 * 8 ]
 			ADCX			R10, [ RBX ] + [ 5 * 8 ]
+
 			MOV				R11, [ RDX ] + [ 4 * 8 ]
 			ADCX			R11, [ RBX ] + [ 4 * 8 ]
+
 			MOV				R12, [ RDX ] + [ 3 * 8 ]
 			ADCX			R12, [ RBX ] + [ 3 * 8 ]
+
 			MOV				R13, [ RDX ] + [ 2 * 8 ]
 			ADCX			R13, [ RBX ] + [ 2 * 8 ]
+
 			MOV				R14, [ RDX ] + [ 1 * 8 ]
 			ADCX			R14, [ RBX ] + [ 1 * 8 ]
+
 			MOV				R15, [ RDX ] + [ 0 * 8 ]
 			ADCX			R15, [ RBX ] + [ 0 * 8 ]
 
@@ -401,24 +408,31 @@ add_u		PROC			PUBLIC
 			MOV				RAX, [ RDX ] + [ 7 * 8 ]
 			ADD				RAX, [ R8 ] + [ 7 * 8 ]
 			MOV				[ RCX ] + [ 7 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 6 * 8 ]
 			ADCX			RAX, [ R8 ] + [ 6 * 8 ]
 			MOV				[ RCX ] + [ 6 * 8 ] , RAX
+
 			MOV				RAX, [ RDX ] + [ 5 * 8 ]
 			ADCX			RAX, [ R8 ] + [ 5 * 8 ]
 			MOV				[ RCX ] + [ 5 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 4 * 8 ]
 			ADCX			RAX, [ R8 ] + [ 4 * 8 ]
 			MOV				[ RCX ] + [ 4 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 3 * 8 ]
 			ADCX			RAX, [ R8 ] + [ 3 * 8 ]
 			MOV				[ RCX ] + [ 3 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 2 * 8 ]
 			ADCX			RAX, [ R8 ] + [ 2 * 8 ]
 			MOV				[ RCX ] + [ 2 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 1 * 8 ]
 			ADCX			RAX, [ R8 ] + [ 1 * 8 ]
 			MOV				[ RCX ] + [ 1 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 0 * 8 ]
 			ADCX			RAX, [ R8 ] + [ 0 * 8 ]
 			MOV				[ RCX ] + [ 0 * 8 ], RAX
@@ -445,27 +459,35 @@ add_uT64	PROC			PUBLIC
 			MOV				RAX, [ RDX ] + [ 7 * 8 ]
 			ADD				RAX, R8 
 			MOV				[ RCX ] + [ 7 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 6 * 8 ]
 			ADC				RAX, 0
 			MOV				[ RCX ] + [ 6 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 5 * 8 ]
 			ADC				RAX, 0
 			MOV				[ RCX ] + [ 5 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 4 * 8 ]
 			ADC				RAX, 0
 			MOV				[ RCX ] + [ 4 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 3 * 8 ]
 			ADC				RAX, 0
 			MOV				[ RCX ] + [ 3 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 2 * 8 ]
 			ADC				RAX, 0
 			MOV				[ RCX ] + [ 2 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 1 * 8 ]
 			ADC				RAX, 0
 			MOV				[ RCX ] + [ 1 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 0 * 8 ]
 			ADC				RAX, 0
 			MOV				[ RCX ] + [ 0 * 8 ], RAX
+
 			MOV				EAX, 0
 			MOV				ECX, 1
 			CMOVC			EAX, ECX
@@ -482,31 +504,40 @@ add_uT64	ENDP
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 
 sub_u		PROC			PUBLIC 
-			MOV				RAX, [ RDX ] + [ 7 * 8 ]
-			SUB				RAX, [ R8 ] + [ 7 * 8 ]
-			MOV				[ RCX ] + [ 7 * 8 ], RAX
-			MOV				RAX, [ RDX ] + [ 6 * 8]
+
+			MOV				RAX, [ RDX ] + [ 7 * 8 ]		; get last word of minuend (least significant word of the number we are subtracting from) (left-hand operand)
+			SUB				RAX, [ R8 ] + [ 7 * 8 ]			; subtract last word of subrahend (the number to be subtracted) (right-hand operand)
+			MOV				[ RCX ] + [ 7 * 8 ], RAX		; store result in last word of difference, note: the flag 'carry' has been set to whether there has been a 'borrow'
+
+			MOV				RAX, [ RDX ] + [ 6 * 8]			; same as above for next word, but use 'sbb' to bring the 'borrow' to this op
 			SBB				RAX, [ R8 ] + [ 6 * 8 ]
 			MOV				[ RCX ] + [ 6 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 5 * 8 ]
 			SBB				RAX, [ R8 ] + [ 5 * 8 ]
 			MOV				[ RCX ] + [ 5 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 4 * 8 ]
 			SBB				RAX, [ R8 ] + [ 4 * 8 ]
 			MOV				[ RCX ] + [ 4 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 3 * 8 ]
 			SBB				RAX, [ R8 ] + [ 3 * 8 ]
 			MOV				[ RCX ] + [ 3 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 2 * 8 ]
 			SBB				RAX, [ R8 ] + [ 2 * 8 ]
 			MOV				[ RCX ] + [ 2 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 1 * 8 ]
 			SBB 			RAX, [ R8 ] + [ 1 * 8 ]
 			MOV				[ RCX ] + [ 1 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 0 * 8 ]
 			SBB				RAX, [ R8 ] + [ 0 * 8 ]
 			MOV				[ RCX ] + [ 0 * 8 ], RAX
-			MOV				EAX, 0
+
+			MOV				EAX, 0							; return, set return code to zero if no remaining borrow, to one if there is a borrow
 			MOV				ECX, 1
 			CMOVC			EAX, ECX
 			RET
@@ -523,30 +554,39 @@ sub_u		ENDP
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 
 sub_uT64	PROC			PUBLIC 
-			MOV				RAX, [ RDX ] + [ 7 * 8 ]
+
+			MOV				RAX, [ RDX ] + [ 7 * 8 ]		; 
 			SUB				RAX, R8
 			MOV				[ RCX ] + [ 7 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 6 * 8 ] 
 			SBB				RAX, 0
 			MOV				[ RCX ] + [ 6 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 5 * 8 ]
 			SBB				RAX, 0
 			MOV				[ RCX ] + [ 5 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 4 * 8 ]
 			SBB				RAX, 0
 			MOV				[ RCX ] + [ 4 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 3 * 8 ]
 			SBB				RAX, 0
 			MOV				[ RCX ] + [ 3 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 2 * 8 ]
 			SBB				RAX, 0
 			MOV				[ RCX ] + [ 2 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 1 * 8 ]
 			SBB 			RAX, 0
 			MOV				[ RCX ] + [ 1 * 8 ], RAX
+
 			MOV				RAX, [ RDX ] + [ 0 * 8 ]
 			SBB				RAX, 0
 			MOV				[ RCX ] + [ 0 * 8 ], RAX
+
 			MOV				EAX, 0
 			MOV				ECX, 1
 			CMOVC			EAX, ECX
