@@ -44,7 +44,7 @@ namespace ui512aTests
 	{
 	public:
 		const s32 runcount = 2500;
-		const s32 timingcount = 10000000;
+		const s32 timingcount = 100000000;
 
 		/// <summary>
 		/// Random number generator

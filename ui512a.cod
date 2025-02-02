@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler (x64) Version 14.42.34435.0   01/09/25 13:55:28
+Microsoft (R) Macro Assembler (x64) Version 14.42.34436.0   02/02/25 12:46:07
 ui512a.asm						     Page 1 - 1
 
 
@@ -115,7 +115,8 @@ ui512a.asm						     Page 1 - 1
 			      C EXTERNDEF	sub_uT64:PROC
 			      C 
 			      C ;			Configuration choices
- = 00000000		      C __PrefRegs	EQU				0
+ = 00000000		      C __PrefZ		EQU				0							; Load into Z, operate with no memory fetch / store un til done
+ = 00000000		      C __PrefQ		EQU				0							; Load data into sequence of regs (requires push/pop save/restore)
  = 00000001		      C __UseZ		EQU				1							; Use AVX4 processor features (512 bit registers and instructions)
  = 00000000		      C __UseY		EQU				0							; Use AVX2 processor features (256 bit registers and instructions)
  = 00000000		      C __UseX		EQU				0							; Use SIMD/SSE processor features (128 bit registers and instructions)
@@ -422,7 +423,7 @@ ui512a.asm						     Page 1 - 1
 				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 
  000000B3			add_u		PROC			PUBLIC 
-					IF		__PrefRegs
+					IF		__PrefZ
 					ELSE
 
  000000B3  48/ 8B 42 38					MOV				RAX, [ RDX ] + [ 7 * 8 ]
@@ -588,7 +589,7 @@ ui512a.asm						     Page 1 - 1
  00000274			sub_uT64	ENDP 
 
 							END
-Microsoft (R) Macro Assembler (x64) Version 14.42.34435.0   01/09/25 13:55:28
+Microsoft (R) Macro Assembler (x64) Version 14.42.34436.0   02/02/25 12:46:07
 ui512a.asm						     Symbols 2 - 1
 
 
@@ -644,7 +645,8 @@ W_PTR  . . . . . . . . . . . . .	Text   	 WORD PTR
 XM_PTR . . . . . . . . . . . . .	Text   	 XMMWORD PTR
 YM_PTR . . . . . . . . . . . . .	Text   	 YMMWORD PTR
 ZM_PTR . . . . . . . . . . . . .	Text   	 ZMMWORD PTR
-__PrefRegs . . . . . . . . . . .	Number	 00000000h   
+__PrefQ  . . . . . . . . . . . .	Number	 00000000h   
+__PrefZ  . . . . . . . . . . . .	Number	 00000000h   
 __UseQ . . . . . . . . . . . . .	Number	 00000000h   
 __UseX . . . . . . . . . . . . .	Number	 00000000h   
 __UseY . . . . . . . . . . . . .	Number	 00000000h   

@@ -105,7 +105,8 @@ EXTERNDEF	sub_u:PROC
 EXTERNDEF	sub_uT64:PROC
 
 ;			Configuration choices
-__PrefRegs	EQU				0
+__PrefZ		EQU				0							; Load into Z, operate with no memory fetch / store un til done
+__PrefQ		EQU				0							; Load data into sequence of regs (requires push/pop save/restore)
 __UseZ		EQU				1							; Use AVX4 processor features (512 bit registers and instructions)
 __UseY		EQU				0							; Use AVX2 processor features (256 bit registers and instructions)
 __UseX		EQU				0							; Use SIMD/SSE processor features (128 bit registers and instructions)

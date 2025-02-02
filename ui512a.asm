@@ -248,20 +248,20 @@ compare_uT64 ENDP
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 
 add_u		PROC			PUBLIC 
-	IF		__PrefRegs
-	;		PrefRegs : Prefer Registers
+	IF		__PrefZ
+	;		PrefZ : Prefer ZMM Registers
 	;		Testing whether reducing memory read / writes by using the ZMM registers as scratch memory is faster
-	;		This routine, and the correcsponding routine without the prefer regs setting, tests that premise
-
-	;		Preferring registers:
+	;		This routine, and the corresponding routine without the prefer Zregs setting, tests that premise
+	;
+	;		Preferring ZMM registers:
 	;			Load the two input 8-word values into two ZMM regs (one memory fetch for each (aligned))
 	;			Extract each corresponding addend word into GP regs, do the addition, put the sum into another Z reg
-	;			When finished with all eight, store the rsulting sum (memory write)
+	;			When finished with all eight, store the resulting sum (one Z memory write)
 	;			Other than the inital two loads, and the ending store, there are no memory ops, no bus ops, 
 	;			all ops are within the CPU and in theory at CPU clock speeds as opposed to bus / memory speeds
 	;			Unknowns: 
-	;						how big is the instruction pipeline? are we waiting for memory fetches for instructions?
-	;						How much clock downshifting occurs when using the ZMM regs (and instructions)?
+	;				how big is the instruction pipeline? are we waiting for memory fetches for instructions (no branches)?
+	;				How much clock downshifting occurs when using the ZMM regs (and instructions)?
 	;
 	;		After testing, using the Z regs in this way is significantly slower than using GP regs, even though many more memory accesses
 	;		Note: This is not using the Z regs for their intended purpose: SIMD; this is using them as awkward scratch registers
@@ -337,6 +337,64 @@ add_u		PROC			PUBLIC
 			VPBROADCASTQ 	ZMM30 {k1}, RAX
 
 			VMOVDQA64		ZM_PTR [ RCX ], ZMM30		; store result
+
+	ELSEIF	__PrefQ
+	;		PrefQ : Prefer regular GP Registers
+	;		Testing whether reordering memory read / writes by doing all the reads, then the writes
+	;		In theory, the writes will cause cache invalidation, thus slowing the next read
+	;		This routine, and the corresponding routine without the prefer Q reg setting, tests that premise
+
+	;		Preferring GP registers:
+	;			Save 8 GP regs on stack (these are new and additional instructions)
+	;			For each of 8 words: Fetch addend into a GP reg, Add other addend to it (carrying the carry bit)
+	;			All memory fetches and operations are done so trash the cache by a sequence of 8 writes to memory.
+	;			Restore the 8 GP registers from the stack (additional instructions)
+	;
+	;		This approach adds 10 instructions (five pushes, five pops) that are also memory writes / reads
+	;				
+	;		Unknowns: 
+	;			how big is the instruction pipeline? are we waiting for memory fetches for instructions?
+	;
+	;		After testing, using the GP regs in this way is slightly slower than straight read, operate, store each word in sequence
+	;
+			PUSH			R15
+			PUSH			R14
+			PUSH			R13
+			PUSH			R12
+			PUSH			RBX
+			MOV				RBX, R8
+
+			MOV				R8, [ RDX ] + [ 7 * 8 ]
+			ADD				R8, [ RBX ] + [ 7 * 8 ]
+			MOV				R9, [ RDX ] + [ 6 * 8 ]
+			ADCX			R9, [ RBX ] + [ 6 * 8 ]
+			MOV				R10, [ RDX ] + [ 5 * 8 ]
+			ADCX			R10, [ RBX ] + [ 5 * 8 ]
+			MOV				R11, [ RDX ] + [ 4 * 8 ]
+			ADCX			R11, [ RBX ] + [ 4 * 8 ]
+			MOV				R12, [ RDX ] + [ 3 * 8 ]
+			ADCX			R12, [ RBX ] + [ 3 * 8 ]
+			MOV				R13, [ RDX ] + [ 2 * 8 ]
+			ADCX			R13, [ RBX ] + [ 2 * 8 ]
+			MOV				R14, [ RDX ] + [ 1 * 8 ]
+			ADCX			R14, [ RBX ] + [ 1 * 8 ]
+			MOV				R15, [ RDX ] + [ 0 * 8 ]
+			ADCX			R15, [ RBX ] + [ 0 * 8 ]
+
+			MOV				[ RCX ] + [ 7 * 8 ], R8
+			MOV				[ RCX ] + [ 6 * 8 ], R9
+			MOV				[ RCX ] + [ 5 * 8 ], R10
+			MOV				[ RCX ] + [ 4 * 8 ], R11
+			MOV				[ RCX ] + [ 3 * 8 ], R12
+			MOV				[ RCX ] + [ 2 * 8 ], R13
+			MOV				[ RCX ] + [ 1 * 8 ], R14
+			MOV				[ RCX ] + [ 0 * 8 ], R15
+
+			POP				RBX
+			POP				R12
+			POP				R13
+			POP				R14
+			POP				R15
 
 	ELSE
 
