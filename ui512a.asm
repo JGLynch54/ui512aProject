@@ -64,6 +64,10 @@
 .CODE
 			OPTION			PROLOGUE:none
 			OPTION			EPILOGUE:none
+			
+ret0		DD				0
+ret1		DD				1
+ret_1		DD				-1
 ;
 ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;			zero_u		-	fill supplied 512bit (8 QWORDS) with zero
@@ -123,8 +127,7 @@ compare_u	PROC			PUBLIC
 			VPCMPUQ			K2, ZMM30, ZMM31, CPGT			
 			KMOVB			ECX, K2
 			CMP				CX, AX
-			MOV				ECX, 0
-			CMOVE			EAX, ECX
+			CMOVE			EAX, ret0
 
 	ELSEIF	__UseY
 			VMOVDQA64		YMM0, YM_PTR [ RCX ] + [ 4 * 8 ]
@@ -144,8 +147,7 @@ compare_u	PROC			PUBLIC
 			SHL				EDX, 4
 			OR				EDX, ECX
 			CMP				EDX, EAX
-			MOV				ECX, 0
-			CMOVE			EAX, ECX
+			CMOVE			EAX, ret0
 
 	ELSE
 			MOV				RAX, [ RCX ] + [ 0 * 8 ]
@@ -174,13 +176,10 @@ compare_u	PROC			PUBLIC
 			JNZ				@F
 			XOR				EAX, EAX
 @@:
-
 	ENDIF
-			MOV				ECX, 1
-			CMOVG			EAX, ECX
-			MOV				ECX, -1
-			CMOVL			EAX, ECX
-			RET 
+			CMOVG			EAX, ret1
+			CMOVL			EAX, ret_1
+			RET
 compare_u	ENDP 
 
 ;
@@ -204,8 +203,7 @@ compare_uT64 PROC			PUBLIC
 			VPCMPUQ			K2, ZMM30, ZMM31, CPGT			
 			KMOVB			ECX, K2
 			CMP				CX, AX
-			MOV				ECX, 0
-			CMOVE			EAX, ECX
+			CMOVE			EAX, ret0
 
 	ELSE
 			XOR				RAX, RAX
@@ -230,10 +228,8 @@ compare_uT64 PROC			PUBLIC
 @@:
 
 	ENDIF
-			MOV				ECX, 1
-			CMOVG			EAX, ECX
-			MOV				ECX, -1
-			CMOVL			EAX, ECX
+			CMOVG			EAX, ret1
+			CMOVL			EAX, ret_1
 			RET
 compare_uT64 ENDP
 
@@ -347,7 +343,7 @@ add_u		PROC			PUBLIC
 	;		Preferring GP registers:
 	;			Save 8 GP regs on stack (these are new and additional instructions)
 	;			For each of 8 words: Fetch addend into a GP reg, Add other addend to it (carrying the carry bit)
-	;			All memory fetches and operations are done so trash the cache by a sequence of 8 writes to memory.
+	;			All memory fetches and operations are done.  so trash the cache by a sequence of 8 writes to memory.
 	;			Restore the 8 GP registers from the stack (additional instructions)
 	;
 	;		This approach adds 10 instructions (five pushes, five pops) that are also memory writes / reads
@@ -364,28 +360,22 @@ add_u		PROC			PUBLIC
 			PUSH			RBX
 			MOV				RBX, R8
 
-			MOV				R8, [ RDX ] + [ 7 * 8 ]
-			ADD				R8, [ RBX ] + [ 7 * 8 ]
-
+			MOV				R8, [ RDX ] + [ 7 * 8 ]	
 			MOV				R9, [ RDX ] + [ 6 * 8 ]
-			ADCX			R9, [ RBX ] + [ 6 * 8 ]
-
 			MOV				R10, [ RDX ] + [ 5 * 8 ]
-			ADCX			R10, [ RBX ] + [ 5 * 8 ]
-
 			MOV				R11, [ RDX ] + [ 4 * 8 ]
-			ADCX			R11, [ RBX ] + [ 4 * 8 ]
-
 			MOV				R12, [ RDX ] + [ 3 * 8 ]
-			ADCX			R12, [ RBX ] + [ 3 * 8 ]
-
 			MOV				R13, [ RDX ] + [ 2 * 8 ]
-			ADCX			R13, [ RBX ] + [ 2 * 8 ]
-
 			MOV				R14, [ RDX ] + [ 1 * 8 ]
-			ADCX			R14, [ RBX ] + [ 1 * 8 ]
-
 			MOV				R15, [ RDX ] + [ 0 * 8 ]
+			
+			ADD				R8, [ RBX ] + [ 7 * 8 ]
+			ADCX			R9, [ RBX ] + [ 6 * 8 ]
+			ADCX			R10, [ RBX ] + [ 5 * 8 ]
+			ADCX			R11, [ RBX ] + [ 4 * 8 ]
+			ADCX			R12, [ RBX ] + [ 3 * 8 ]
+			ADCX			R13, [ RBX ] + [ 2 * 8 ]
+			ADCX			R14, [ RBX ] + [ 1 * 8 ]
 			ADCX			R15, [ RBX ] + [ 0 * 8 ]
 
 			MOV				[ RCX ] + [ 7 * 8 ], R8
@@ -440,8 +430,7 @@ add_u		PROC			PUBLIC
 	ENDIF
 	
 			MOV				EAX, 0						; return carry flag as overflow
-			MOV				ECX, 1
-			CMOVC			EAX, ECX	
+			CMOVC			EAX, ret1
 			RET	
 add_u		ENDP 
 
@@ -489,8 +478,7 @@ add_uT64	PROC			PUBLIC
 			MOV				[ RCX ] + [ 0 * 8 ], RAX
 
 			MOV				EAX, 0
-			MOV				ECX, 1
-			CMOVC			EAX, ECX
+			CMOVC			EAX, ret1
 			RET	
 add_uT64	ENDP 
 ;
@@ -538,8 +526,7 @@ sub_u		PROC			PUBLIC
 			MOV				[ RCX ] + [ 0 * 8 ], RAX
 
 			MOV				EAX, 0							; return, set return code to zero if no remaining borrow, to one if there is a borrow
-			MOV				ECX, 1
-			CMOVC			EAX, ECX
+			CMOVC			EAX, ret1
 			RET
 sub_u		ENDP 
 
@@ -588,8 +575,7 @@ sub_uT64	PROC			PUBLIC
 			MOV				[ RCX ] + [ 0 * 8 ], RAX
 
 			MOV				EAX, 0
-			MOV				ECX, 1
-			CMOVC			EAX, ECX
+			CMOVC			EAX, ret1
 			RET
 sub_uT64	ENDP 
 
