@@ -491,17 +491,17 @@ namespace ui512aTests
 				num1[7] = ~num2;
 				// add test: "random" number plus ones complement should equal 0xfff..., no carries or overflow
 				overflow = add_uT64(sum, num1, num2);
-				Assert::AreEqual(overflow, 0);
+				Assert::AreEqual(0, overflow);
 				for (int j = 0; j < 8; j++)
 				{
-					Assert::AreEqual(sum[j], 0xFFFFFFFFFFFFFFFFull);
+					Assert::AreEqual(0xFFFFFFFFFFFFFFFFull, sum[j]);
 				};
 				// now add one, should cascade carries through all eight, making them each zero, and overflow
 				overflow = add_uT64(sum, sum, 0x0000000000000001ull);		// Note:  Destination (sum) is also an operand
-				Assert::AreEqual(overflow, 1);
+				Assert::AreEqual(1, overflow);
 				for (int j = 0; j < 8; j++)
 				{
-					Assert::AreEqual(sum[j], 0x0000000000000000ull);
+					Assert::AreEqual(0x0000000000000000ull, sum[j]);
 				};
 			};
 
