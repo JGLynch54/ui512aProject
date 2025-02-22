@@ -150,10 +150,10 @@ compare_u		PROC			PUBLIC
 				RET
 
 	ELSEIF	__UseY
-				VMOVDQA64		YMM0, YM_PTR [ RCX ] + [ 4 * 8 ]
-				VMOVDQA64		YMM1, YM_PTR [ RCX ] + [ 0 * 8 ]
-				VMOVDQA64		YMM2, YM_PTR [ RDX ] + [ 4 * 8 ]
-				VMOVDQA64		YMM3, YM_PTR [ RDX ] + [ 0 * 8 ]
+				VMOVDQA64		YMM0, YM_PTR [ RCX + 4 * 8 ]
+				VMOVDQA64		YMM1, YM_PTR [ RCX + 0 * 8 ]
+				VMOVDQA64		YMM2, YM_PTR [ RDX + 4 * 8 ]
+				VMOVDQA64		YMM3, YM_PTR [ RDX + 0 * 8 ]
 				VPCMPUQ			K1, YMM0, YMM2, CPLT
 				KMOVB			EAX, K1
 				VPCMPUQ			K2, YMM1, YMM3, CPLT
@@ -372,12 +372,12 @@ add_u			PROC			PUBLIC
 ;		Testing whether reordering memory read / writes by doing all the reads, then the writes
 ;		In theory, the writes will cause cache invalidation, thus slowing the next read
 ;		This routine, and the corresponding routine without the prefer Q reg setting, tests that premise
-
+;
 ;		Preferring GP registers:
-;			Save 8 GP regs on stack (these are new and additional instructions)
+;			Save 5 GP regs on stack (these are new and additional instructions)
 ;			For each of 8 words: Fetch addend into a GP reg, Add other addend to it (carrying the carry bit)
 ;			All memory fetches and operations are done.  so trash the cache by a sequence of 8 writes to memory.
-;			Restore the 8 GP registers from the stack (additional instructions)
+;			Restore the 5 GP registers from the stack (additional instructions)
 ;
 ;		This approach adds 10 instructions (five pushes, five pops) that are also memory writes / reads
 ;				
@@ -430,7 +430,17 @@ add_u			PROC			PUBLIC
 				RET
 
 	ELSEIF	__UseZ
-
+;
+;	__UseZ approach
+;		Load operands into ZMM regs. Do in-lane qword adds (simultaneously)
+;		Compare result to addend to see if any carries (in-lane simultaneous compare)
+;		If there are carries: sort out which lanes, add 1 to next higher order word(s) where carries occured (in-lane add)
+;		Special case: if highest order word carried, set overflow
+;		Add of carries may cause asdditional carries, so repeat until no carries
+;
+;		Best case: no carries - 15 instruction.
+;		Worst case: an eight word cascading carry all the way to overflow: loops eight times
+;
 ; Load operands				
 				VMOVDQA64		ZMM30, ZM_PTR [RDX]					; ZMM30 = addend1 (8 QWORDs)
 				VMOVDQA64		ZMM31, ZM_PTR [R8]					; ZMM31 = addend2 (8 QWORDs)
@@ -655,37 +665,37 @@ sub_u			PROC			PUBLIC
 
 	ELSE
 
-				MOV				RAX, [ RDX ] + [ 7 * 8 ]			; get last word of minuend (least significant word of the number we are subtracting from) (left-hand operand)
-				SUB				RAX, [ R8 ] + [ 7 * 8 ]				; subtract last word of subrahend (the number to be subtracted) (right-hand operand)
-				MOV				[ RCX ] + [ 7 * 8 ], RAX			; store result in last word of difference, note: the flag 'carry' has been set to whether there has been a 'borrow'
+				MOV				RAX, [ RDX + 7 * 8 ]				; get last word of minuend (least significant word of the number we are subtracting from) (left-hand operand)
+				SUB				RAX, [ R8 + 7 * 8 ]					; subtract last word of subrahend (the number to be subtracted) (right-hand operand)
+				MOV				[ RCX + 7 * 8 ], RAX				; store result in last word of difference, note: the flag 'carry' has been set to whether there has been a 'borrow'
 
-				MOV				RAX, [ RDX ] + [ 6 * 8]				; same as above for next word, but use 'sbb' to bring the 'borrow' to this op
-				SBB				RAX, [ R8 ] + [ 6 * 8 ]
-				MOV				[ RCX ] + [ 6 * 8 ], RAX
+				MOV				RAX, [ RDX + 6 * 8]					; same as above for next word, but use 'sbb' to bring the 'borrow' to this op
+				SBB				RAX, [ R8 + 6 * 8 ]
+				MOV				[ RCX + 6 * 8 ], RAX
 
-				MOV				RAX, [ RDX ] + [ 5 * 8 ]
-				SBB				RAX, [ R8 ] + [ 5 * 8 ]
-				MOV				[ RCX ] + [ 5 * 8 ], RAX
+				MOV				RAX, [ RDX + 5 * 8 ]
+				SBB				RAX, [ R8+ 5 * 8 ]
+				MOV				[ RCX + 5 * 8 ], RAX
 
-				MOV				RAX, [ RDX ] + [ 4 * 8 ]
-				SBB				RAX, [ R8 ] + [ 4 * 8 ]
-				MOV				[ RCX ] + [ 4 * 8 ], RAX
+				MOV				RAX, [ RDX + 4 * 8 ]
+				SBB				RAX, [ R8 + 4 * 8 ]
+				MOV				[ RCX + 4 * 8 ], RAX
 
-				MOV				RAX, [ RDX ] + [ 3 * 8 ]
-				SBB				RAX, [ R8 ] + [ 3 * 8 ]
-				MOV				[ RCX ] + [ 3 * 8 ], RAX
+				MOV				RAX, [ RDX + 3 * 8 ]
+				SBB				RAX, [ R8 + 3 * 8 ]
+				MOV				[ RCX + 3 * 8 ], RAX
 
-				MOV				RAX, [ RDX ] + [ 2 * 8 ]
-				SBB				RAX, [ R8 ] + [ 2 * 8 ]
-				MOV				[ RCX ] + [ 2 * 8 ], RAX
+				MOV				RAX, [ RDX + 2 * 8 ]
+				SBB				RAX, [ R8 + 2 * 8 ]
+				MOV				[ RCX + 2 * 8 ], RAX
 
-				MOV				RAX, [ RDX ] + [ 1 * 8 ]
-				SBB 			RAX, [ R8 ] + [ 1 * 8 ]
-				MOV				[ RCX ] + [ 1 * 8 ], RAX
+				MOV				RAX, [ RDX + 1 * 8 ]
+				SBB 			RAX, [ R8 + 1 * 8 ]
+				MOV				[ RCX + 1 * 8 ], RAX
 
-				MOV				RAX, [ RDX ] + [ 0 * 8 ]
-				SBB				RAX, [ R8 ] + [ 0 * 8 ]
-				MOV				[ RCX ] + [ 0 * 8 ], RAX
+				MOV				RAX, [ RDX + 0 * 8 ]
+				SBB				RAX, [ R8 + 0 * 8 ]
+				MOV				[ RCX + 0 * 8 ], RAX
 
 				MOV				EAX, 0								; return, set return code to zero if no remaining borrow, to one if there is a borrow
 				CMOVC			EAX, ret1

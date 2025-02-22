@@ -26,7 +26,7 @@
 ;				If processor extensions are used, the caller must align the variables declared and passed
 ;				on the appropriate byte boundary (e.g. alignas 64 for 512)
 ;
-;				This module is very light-weight (less than 1K bytes) and relatively fast,
+;				This module is very light-weight (less than 2K bytes) and relatively fast,
 ;				but is not intended for all processor types or all environments. 
 ;
 ;				Use for private (hobbyist), or instructional, or as an example for more ambitious projects is all it is meant to be.
@@ -113,7 +113,7 @@ __UseY			EQU				0									; Use AVX2 processor features (256 bit registers and i
 __UseX			EQU				0									; Use SIMD/SSE processor features (128 bit registers and instructions)
 __UseQ			EQU				0									; Do not use extensions, use standard x64 bit registers and instructions
 ;
-__CheckAlign	EQU				1									; User is expected to pass arguments aligned on 64 byte boundaries, 
+__CheckAlign	EQU				0									; User is expected to pass arguments aligned on 64 byte boundaries, 
 																	; This setting enforces that with a check. It should not be necessary, but included to help debugging
 
 ;           Some coding shortcuts
@@ -175,12 +175,14 @@ MaskBit7		EQU				B_PTR [ 10000000b ]
 ;			Test passed variable addresses for 64 byte alignment
 ;			Note: Better performance if this is off, but for debugging, maybe have it on
 ;
+
 CheckAlign		MACRO			Raddr
-	IF			__CheckAlign
+				LOCAL			ok
+	IF	__CheckAlign
 				TEST			Raddr, 63							; Is specified param aligned 64?
-				JZ				@F									; Yes, passes test, continue
+				JZ				ok									; Yes, passes test, continue
 				INT				0									; No, fails, break (can substitute other exception handling)
-@@:
+ok:
 	ENDIF
 				ENDM
 
@@ -191,29 +193,29 @@ CheckAlign		MACRO			Raddr
 
 Zero512			MACRO			dest
 				CheckAlign		dest
-	IF			__UseZ
+	IF	__UseZ
 				VPXORQ			ZMM31, ZMM31, ZMM31
 				VMOVDQA64		ZM_PTR [ dest ], ZMM31
-	ELSEIF		__UseY
+	ELSEIF	__UseY
 				VPXORQ			YMM4, YMM4, YMM4
-				VMOVDQA64		YM_PTR [ dest ] + [ 0 * 8 ], YMM4
-				VMOVDQA64		YM_PTR [ dest ] + [ 4 * 8 ], YMM4
-	ELSEIF		__UseX
+				VMOVDQA64		YM_PTR [ dest + 0 * 8 ], YMM4
+				VMOVDQA64		YM_PTR [ dest + 4 * 8 ], YMM4
+	ELSEIF	__UseX
 				PXOR			XMM4, XMM4
-				MOVDQA			XM_PTR [ dest ] + [ 0 * 8 ], XMM4
-				MOVDQA			XM_PTR [ dest ] + [ 2 * 8 ], XMM4
-				MOVDQA			XM_PTR [ dest ] + [ 4 * 8 ], XMM4
-				MOVDQA			XM_PTR [ dest ] + [ 6 * 8 ], XMM4			
+				MOVDQA			XM_PTR [ dest + 0 * 8 ], XMM4
+				MOVDQA			XM_PTR [ dest + 2 * 8 ], XMM4
+				MOVDQA			XM_PTR [ dest + 4 * 8 ], XMM4
+				MOVDQA			XM_PTR [ dest + 6 * 8 ], XMM4			
 	ELSE
 				XOR				RAX, RAX
-				MOV				[ dest ] + [ 0 * 8 ], RAX
-				MOV				[ dest ] + [ 1 * 8 ], RAX
-				MOV				[ dest ] + [ 2 * 8 ], RAX
-				MOV				[ dest ] + [ 3 * 8 ], RAX
-				MOV				[ dest ] + [ 4 * 8 ], RAX
-				MOV				[ dest ] + [ 5 * 8 ], RAX
-				MOV				[ dest ] + [ 6 * 8 ], RAX
-				MOV				[ dest ] + [ 7 * 8 ], RAX
+				MOV				[ dest + 0 * 8 ], RAX
+				MOV				[ dest + 1 * 8 ], RAX
+				MOV				[ dest + 2 * 8 ], RAX
+				MOV				[ dest + 3 * 8 ], RAX
+				MOV				[ dest + 4 * 8 ], RAX
+				MOV				[ dest + 5 * 8 ], RAX
+				MOV				[ dest + 6 * 8 ], RAX
+				MOV				[ dest + 7 * 8 ], RAX
 	ENDIF
 				ENDM
 
@@ -225,44 +227,42 @@ Zero512			MACRO			dest
 Copy512			MACRO			dest, src
 				CheckAlign		dest
 				CheckAlign		src
-	IF			__UseZ
+	IF	__UseZ
 				VMOVDQA64		ZMM31, ZM_PTR [ src ]
 				VMOVDQA64		ZM_PTR [ dest ], ZMM31
-	ELSEIF		__UseY
-				VMOVDQA64		YMM4, YM_PTR [ src ] + [ 0 * 8 ]
-				VMOVDQA64		YM_PTR [ dest ] + [ 0 * 8 ], YMM4	; alternate ymm regs in case pipeline can execute next without waiting for this.
-				VMOVDQA64		YMM5, YM_PTR [ src ] + [ 4 * 8 ]
-				VMOVDQA64		YM_PTR [ dest ] + [ 4 * 8 ], YMM5
-	ELSEIF		__UseX
-				MOVDQA			XMM4, XM_PTR [ src ] + [ 0 * 8 ]
-				MOVDQA			XM_PTR [ dest ] + [ 0 * 8 ], XMM4
-				MOVDQA			XMM3, XM_PTR [ src ] + [ 2 * 8 ]
-				MOVDQA			XM_PTR [ dest ] + [ 2 * 8 ], XMM3
-				MOVDQA			XMM4, XM_PTR [ src ] + [ 4 * 8 ]
-				MOVDQA			XM_PTR [ dest ] + [ 4 * 8 ], XMM4
-				MOVDQA			XMM3, XM_PTR [ src ] + [ 6 * 8 ]
-				MOVDQA			XM_PTR [ dest ] + [ 6 * 8 ], XMM3
+	ELSEIF	__UseY
+				VMOVDQA64		YMM4, YM_PTR [ src + 0 * 8 ]
+				VMOVDQA64		YM_PTR [ dest + 0 * 8 ], YMM4	; alternate ymm regs in case pipeline can execute next without waiting for this.
+				VMOVDQA64		YMM5, YM_PTR [ src + 4 * 8 ]
+				VMOVDQA64		YM_PTR [ dest + 4 * 8 ], YMM5
+	ELSEIF	__UseX
+				MOVDQA			XMM4, XM_PTR [ src + 0 * 8 ]
+				MOVDQA			XM_PTR [ dest + 0 * 8 ], XMM4
+				MOVDQA			XMM3, XM_PTR [ src + 2 * 8 ]
+				MOVDQA			XM_PTR [ dest + 2 * 8 ], XMM3
+				MOVDQA			XMM4, XM_PTR [ src + 4 * 8 ]
+				MOVDQA			XM_PTR [ dest + 4 * 8 ], XMM4
+				MOVDQA			XMM3, XM_PTR [ src + 6 * 8 ]
+				MOVDQA			XM_PTR [ dest + 6 * 8 ], XMM3
 	ELSE
-				MOV				RAX, [ src ] + [ 0 * 8 ]
-				MOV				[ dest ] + [ 0 * 8 ], RAX
-				MOV				RAX, [ src ] + [ 1 * 8 ]
-				MOV				[ dest ] + [ 1 * 8 ], RAX
-				MOV				RAX, [ src ] + [ 2 * 8 ]
-				MOV				[ dest ] + [ 2 * 8 ], RAX
-				MOV				RAX, [ src ] + [ 3 * 8 ]
-				MOV				[ dest ] + [ 3 * 8 ], RAX
-				MOV				RAX, [ src ] + [ 4 * 8 ]
-				MOV				[ dest ] + [ 4 * 8 ], RAX
-				MOV				RAX, [ src ] + [ 5 * 8 ]
-				MOV				[ dest ] + [ 5 * 8 ], RAX
-				MOV				RAX, [ src ] + [ 6 * 8 ]
-				MOV				[ dest ] + [ 6 * 8 ], RAX
-				MOV				RAX, [ src ] + [ 7 * 8 ]
-				MOV				[ dest ] + [ 7 * 8 ], RAX
+				MOV				RAX, [ src + 0 * 8 ]
+				MOV				[ dest + 0 * 8 ], RAX
+				MOV				RAX, [ src + 1 * 8 ]
+				MOV				[ dest + 1 * 8 ], RAX
+				MOV				RAX, [ src + 2 * 8 ]
+				MOV				[ dest + 2 * 8 ], RAX
+				MOV				RAX, [ src + 3 * 8 ]
+				MOV				[ dest + 3 * 8 ], RAX
+				MOV				RAX, [ src + 4 * 8 ]
+				MOV				[ dest + 4 * 8 ], RAX
+				MOV				RAX, [ src + 5 * 8 ]
+				MOV				[ dest + 5 * 8 ], RAX
+				MOV				RAX, [ src + 6 * 8 ]
+				MOV				[ dest + 6 * 8 ], RAX
+				MOV				RAX, [ src + 7 * 8 ]
+				MOV				[ dest + 7 * 8 ], RAX
 	ENDIF
 				ENDM
-
-
 
 ;
 ;			Get a GP reg QWORD from within a Z register as specified by mask
