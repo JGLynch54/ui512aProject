@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler (x64) Version 14.43.34808.0   02/22/25 16:31:47
+Microsoft (R) Macro Assembler (x64) Version 14.43.34808.0   02/22/25 16:56:43
 ui512a.asm						     Page 1 - 1
 
 
@@ -84,17 +84,17 @@ ui512a.asm						     Page 1 - 1
 			      C ;	// set supplied destination 512 bit to supplied u64 value
 			      C EXTERNDEF		set_uT64:PROC
 			      C 
-			      C ;	// int compare_u ( u64* lh_op, u64* rh_op );
+			      C ;	// s32 compare_u ( u64* lh_op, u64* rh_op );
 			      C ;	// compare supplied 512bit (8 QWORDS) LH operand to supplied RH operand
 			      C ;	// returns: (0) for equal, -1 for less than, 1 for greater than (logical, unsigned compare)
 			      C EXTERNDEF		compare_u:PROC
 			      C 
-			      C ;	// int compare_uT64 ( u64* lh_op, u64 rh_op );
+			      C ;	// s32 compare_uT64 ( u64* lh_op, u64 rh_op );
 			      C ;	// compare supplied 512bit (8 QWORDS) LH operand to supplied 64bit RH operand (value)
 			      C ;	// returns: (0) for equal, -1 for less than, 1 for greater than (logical, unsigned compare)
 			      C EXTERNDEF		compare_uT64:PROC
 			      C 
-			      C ;	// void add_u ( u64* sum, u64* addend1, u64* addend2 );
+			      C ;	// s32 add_u ( u64* sum, u64* addend1, u64* addend2 );
 			      C ;	// add supplied 512bit (8 QWORDS) sources, place in supplied destination
 			      C ;	// returns: zero for no carry, 1 for carry (overflow)
 			      C EXTERNDEF		add_u:PROC
@@ -732,7 +732,7 @@ ui512a.asm						     Page 1 - 1
  00000238			sub_uT64		ENDP 
 
 								END
-Microsoft (R) Macro Assembler (x64) Version 14.43.34808.0   02/22/25 16:31:47
+Microsoft (R) Macro Assembler (x64) Version 14.43.34808.0   02/22/25 16:56:43
 ui512a.asm						     Symbols 2 - 1
 
 

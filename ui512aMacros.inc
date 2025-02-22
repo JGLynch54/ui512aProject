@@ -74,17 +74,17 @@ EXTERNDEF		copy_u:PROC
 ;	// set supplied destination 512 bit to supplied u64 value
 EXTERNDEF		set_uT64:PROC
 
-;	// int compare_u ( u64* lh_op, u64* rh_op );
+;	// s32 compare_u ( u64* lh_op, u64* rh_op );
 ;	// compare supplied 512bit (8 QWORDS) LH operand to supplied RH operand
 ;	// returns: (0) for equal, -1 for less than, 1 for greater than (logical, unsigned compare)
 EXTERNDEF		compare_u:PROC
 
-;	// int compare_uT64 ( u64* lh_op, u64 rh_op );
+;	// s32 compare_uT64 ( u64* lh_op, u64 rh_op );
 ;	// compare supplied 512bit (8 QWORDS) LH operand to supplied 64bit RH operand (value)
 ;	// returns: (0) for equal, -1 for less than, 1 for greater than (logical, unsigned compare)
 EXTERNDEF		compare_uT64:PROC
 
-;	// void add_u ( u64* sum, u64* addend1, u64* addend2 );
+;	// s32 add_u ( u64* sum, u64* addend1, u64* addend2 );
 ;	// add supplied 512bit (8 QWORDS) sources, place in supplied destination
 ;	// returns: zero for no carry, 1 for carry (overflow)
 EXTERNDEF		add_u:PROC
