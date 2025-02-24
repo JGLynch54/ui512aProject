@@ -30,35 +30,35 @@ extern "C"
 	// set supplied destination 512 bit to supplied u64 value
 	void set_uT64(u64*, u64);
 
-	// s32 compare_u ( u64* lh_op, u64* rh_op );
+	// s16 compare_u ( u64* lh_op, u64* rh_op );
 	// compare supplied 512bit (8 QWORDS) LH operand to supplied RH operand
 	// returns: (0) for equal, -1 for less than, 1 for greater than (logical, unsigned compare)
-	s32 compare_u(u64*, u64*);
+	s16 compare_u(u64*, u64*);
 
-	// s32 compare_uT64 ( u64* lh_op, u64 rh_op );
+	// s16 compare_uT64 ( u64* lh_op, u64 rh_op );
 	// compare supplied 512bit (8 QWORDS) LH operand to supplied 64bit RH operand (value)
 	// returns: (0) for equal, -1 for less than, 1 for greater than (logical, unsigned compare)
-	s32 compare_uT64(u64*, u64);
+	s16 compare_uT64(u64*, u64);
 
-	// s32 add_u ( u64* sum, u64* addend1, u64* addend2 );
+	// s16 add_u ( u64* sum, u64* addend1, u64* addend2 );
 	// add supplied 512bit (8 QWORDS) sources to supplied destination
 	// returns: zero for no carry, 1 for carry (overflow)
-	s32 add_u(u64*, u64*, u64*);
+	s16 add_u(u64*, u64*, u64*);
 
-	// s32 add_uT64 ( u64* sum, u64* addend1, u64 addend2 );
+	// s16 add_uT64 ( u64* sum, u64* addend1, u64 addend2 );
 	// add 64bit QWORD (value) to supplied 512bit (8 QWORDS), place in supplied destination
 	// returns: zero for no carry, 1 for carry (overflow)
-	s32 add_uT64(u64*, u64*, u64);
+	s16 add_uT64(u64*, u64*, u64);
 
-	// s32 sub_u ( u64* difference, u64* left operand, u64* right operand );
+	// s16 sub_u ( u64* difference, u64* left operand, u64* right operand );
 	// subtract supplied 512bit (8 QWORDS) RH OP from LH OP giving difference in destination
 	// returns: zero for no borrow, 1 for borrow (underflow)
-	s32 sub_u(u64*, u64*, u64*);
+	s16 sub_u(u64*, u64*, u64*);
 
-	// s32 sub_uT64( u64* difference, u64* left operand, u64 right operand );
+	// s16 sub_uT64( u64* difference, u64* left operand, u64 right operand );
 	// subtract supplied 64 bit right hand (64 bit value) op from left hand (512 bit) giving difference
 	// returns: zero for no borrow, 1 for borrow (underflow)
-	s32 sub_uT64(u64*, u64*, u64);
+	s16 sub_uT64(u64*, u64*, u64);
 };
 
 #endif

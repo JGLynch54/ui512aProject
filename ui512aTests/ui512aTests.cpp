@@ -65,7 +65,7 @@ namespace ui512aTests
 
 		TEST_METHOD(random_number_generator)
 		{
-			//	Check distibution of "random" numbers
+			//	Check distribution of "random" numbers
 			u64 seed = 0;
 			const u32 dec = 10;
 			u32 dist[dec]{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -87,11 +87,11 @@ namespace ui512aTests
 
 			string msgd = "Evaluation of pseudo-random number generator.\n\n";
 			msgd += format("Generated {0:*>8} numbers.\n", randomcount);
-			msgd += format("Counted occurances of those numbers by decile, each decile {0:*>20}.\n", split);
-			msgd += format("Distribution of numbers accross the deciles indicates the quality of the generator.\n\n");
+			msgd += format("Counted occurrences of those numbers by decile, each decile {0:*>20}.\n", split);
+			msgd += format("Distribution of numbers across the deciles indicates the quality of the generator.\n\n");
 			msgd += "Distribution by decile:";
 			string msgv = "Variance from mean:\t";
-			string msgchi = "Varience ^2 (chi):\t";
+			string msgchi = "Variance ^2 (chi):\t";
 
 			for (int i = 0; i < 10; i++)
 			{
@@ -108,7 +108,7 @@ namespace ui512aTests
 
 			msgd += "\t\tDecile counts sum to: " + to_string(distc) + "\n";
 			Logger::WriteMessage(msgd.c_str());
-			msgv += "\t\tVarience sums to: ";
+			msgv += "\t\tVariance sums to: ";
 			msgv += format("\t{:6.3f}% ", varsum);
 			msgv += '\n';
 			Logger::WriteMessage(msgv.c_str());
@@ -146,7 +146,7 @@ namespace ui512aTests
 		TEST_METHOD(ui512a_01_zero_timing)
 		{
 			// Zero function timing. Run function a bunch of times. See if coding changes improve/reduce overall timing.
-			// Eliminate everthing possible except just repeatedly calling the function.
+			// Eliminate everything possible except just repeatedly calling the function.
 			u64 seed = 0;
 			alignas (64) u64 num1[8]
 			{
@@ -198,7 +198,7 @@ namespace ui512aTests
 		TEST_METHOD(ui512a_02_copy_timing)
 		{
 			// Copy function timing. Run function a bunch of times. See if coding changes improve/reduce overall timing.
-			// Eliminate everthing possible except just repeatedly calling the function.
+			// Eliminate everything possible except just repeatedly calling the function.
 			u64 seed = 0;
 			alignas (64) u64 num1[8]
 			{
@@ -458,6 +458,30 @@ namespace ui512aTests
 				{
 					Assert::AreEqual(0x0000000000000000ull, num1[j]);
 				};
+
+				for (int j = 0; j < 8; j++)
+				{
+					num1[j] = RandomU64(&seed);
+					num2[j] = RandomU64(&seed);
+					sum[j] = 0;
+				};
+
+				overflow = add_u(sum, num1, num2);
+				if (overflow)
+				{
+					if (compare_u(sum, num1) != -1)
+					{
+						Logger::WriteMessage("Overflow error: false positive");
+					};
+				}
+				if (!overflow)
+				{
+					if (compare_u(sum, num1) == -1)
+					{
+						Logger::WriteMessage("Overflow error: false negative");
+					};
+				}
+
 			};
 
 			string runmsg = "Add function testing. Ran tests " + to_string(runcount * 5) + " times, each with pseudo random values.\n";

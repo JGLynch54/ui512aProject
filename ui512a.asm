@@ -65,22 +65,7 @@
 				OPTION			PROLOGUE:none
 				OPTION			EPILOGUE:none
 
-;
-;--------------------------------------------------------------------------------------------------------------------------------------------------------------
-;		Return codes commonly used.			
-ret0			DD				0								
-ret1			DD				1
-ret_1			DD				-1
-;		Masks commonly used
-mskAll8			DB				255
-mskB0			DB				1
-mskB1			DB				2
-mskB2			DB				4
-mskB3			DB				8
-mskB4			DB				16
-mskB5			DB				32
-mskB6			DB				64
-mskB7			DB				128
+				MemConstants
 
 ;
 ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -460,7 +445,7 @@ add_u			PROC			PUBLIC
 @@checkcarry:
 				KMOVB			R10, K1								; Mask bits results (from compare above) in k1 to R10 (and R8)
 				MOV				R8, R10
-				AND				R10, 1								; if high order word has carry, 
+				AND				R10B, mskB0							; if high order word has carry, 
 				CMOVNZ			EAX, ret1							; retain it in EAX for eventual return code
 				SHR				R8, 1								; Shift right: carry-in for each lane (from lane i+1 to i)	
 				JZ				@@saveexit							; if, after alignment shift, there are no carries, save and exit
@@ -554,7 +539,7 @@ add_uT64		PROC			PUBLIC
 @@checkcarry:
 				KMOVB			R10, K1								; Mask bits results (from compare above) in k1 to R10 (and R8)
 				MOV				R8, R10
-				AND				R10, 1								; if high order word has carry, 
+				AND				R10B, mskB0								; if high order word has carry, 
 				CMOVNZ			EAX, ret1							; retain it in EAX for eventual return code
 				SHR				R8, 1								; Shift right: carry-in for each lane (from lane i+1 to i)	
 				JZ				@@saveexit							; if, after alignment shift, there are no carries, save and exit

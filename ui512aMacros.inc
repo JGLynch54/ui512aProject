@@ -74,32 +74,32 @@ EXTERNDEF		copy_u:PROC
 ;	// set supplied destination 512 bit to supplied u64 value
 EXTERNDEF		set_uT64:PROC
 
-;	// s32 compare_u ( u64* lh_op, u64* rh_op );
+;	// s16 compare_u ( u64* lh_op, u64* rh_op );
 ;	// compare supplied 512bit (8 QWORDS) LH operand to supplied RH operand
 ;	// returns: (0) for equal, -1 for less than, 1 for greater than (logical, unsigned compare)
 EXTERNDEF		compare_u:PROC
 
-;	// s32 compare_uT64 ( u64* lh_op, u64 rh_op );
+;	// s16 compare_uT64 ( u64* lh_op, u64 rh_op );
 ;	// compare supplied 512bit (8 QWORDS) LH operand to supplied 64bit RH operand (value)
 ;	// returns: (0) for equal, -1 for less than, 1 for greater than (logical, unsigned compare)
 EXTERNDEF		compare_uT64:PROC
 
-;	// s32 add_u ( u64* sum, u64* addend1, u64* addend2 );
+;	// s16 add_u ( u64* sum, u64* addend1, u64* addend2 );
 ;	// add supplied 512bit (8 QWORDS) sources, place in supplied destination
 ;	// returns: zero for no carry, 1 for carry (overflow)
 EXTERNDEF		add_u:PROC
 
-;	// s32 add_uT64 ( u64* sum, u64* addend1, u64 addend2 );
+;	// s16 add_uT64 ( u64* sum, u64* addend1, u64 addend2 );
 ;	// add 64bit QWORD (value) to supplied 512bit (8 QWORDS), place in supplied destination
 ;	// returns: zero for no carry, 1 for carry (overflow)
 EXTERNDEF		add_uT64:PROC
 
-;	// s32 sub_u ( u64* difference, u64* left operand, u64* right operand );
+;	// s16 sub_u ( u64* difference, u64* left operand, u64* right operand );
 ;	// subtract supplied 512bit (8 QWORDS) RH OP from LH OP giving difference in destination
 ;	// returns: zero for no borrow, 1 for borrow (underflow)
 EXTERNDEF		sub_u:PROC
 
-;	// s32 sub_uT64( u64* difference, u64* left operand, u64 right operand );
+;	// s16 sub_uT64( u64* difference, u64* left operand, u64 right operand );
 ;	// subtract supplied 64 bit right hand (64 bit value) op from left hand (512 bit) giving difference
 ;	// returns: zero for no borrow, 1 for borrow (underflow)
 EXTERNDEF		sub_uT64:PROC
@@ -113,7 +113,7 @@ __UseY			EQU				0									; Use AVX2 processor features (256 bit registers and i
 __UseX			EQU				0									; Use SIMD/SSE processor features (128 bit registers and instructions)
 __UseQ			EQU				0									; Do not use extensions, use standard x64 bit registers and instructions
 ;
-__CheckAlign	EQU				0									; User is expected to pass arguments aligned on 64 byte boundaries, 
+__CheckAlign	EQU				1									; User is expected to pass arguments aligned on 64 byte boundaries, 
 																	; This setting enforces that with a check. It should not be necessary, but included to help debugging
 
 ;           Some coding shortcuts
@@ -186,6 +186,22 @@ ok:
 	ENDIF
 				ENDM
 
+MemConstants	MACRO
+;		Return codes commonly used.			
+ret0			DD				0								
+ret1			DD				1
+ret_1			DD				-1
+;		Masks commonly used
+mskAll8			DB				255
+mskB0			DB				1
+mskB1			DB				2
+mskB2			DB				4
+mskB3			DB				8
+mskB4			DB				16
+mskB5			DB				32
+mskB6			DB				64
+mskB7			DB				128
+				ENDM
 
 ;
 ;			Zero a 512 bit destination, conditional assembly based on configuration parameters
