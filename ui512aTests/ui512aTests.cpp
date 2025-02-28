@@ -295,13 +295,13 @@ namespace ui512aTests
 				for (int j = 0; j <= 7; j++)
 				{
 					num2[j]++;
-					eval = compare_u(num1, num2);
+					eval = compare_u(num1, num2);		// num1 < num2
 					Assert::AreEqual(-1, eval);
 					num2[j] -= 2;
-					eval = compare_u(num1, num2);
+					eval = compare_u(num1, num2);		// num1 > num2
 					Assert::AreEqual(1, eval);
 					num2[j]++;
-					eval = compare_u(num1, num2);
+					eval = compare_u(num1, num2);		// num1 == num2
 					Assert::AreEqual(0, eval);
 				};
 			};
@@ -396,7 +396,7 @@ namespace ui512aTests
 			alignas (64) u64 sum[8]{ 0, 0, 0, 0, 0, 0, 0, 0 };
 			alignas (64) u64 one[8]{ 0, 0, 0, 0, 0, 0, 0, 1 };
 			u64 seed = 0;
-			s32 overflow = 0;
+			s16 overflow = 0;
 
 			alignas (64) u64 cascade1[8]{ 0xFFFFFFFFFFFFFFFF, 0, 0, 0xFFFFFFFFFFFFFFFF, 0, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 1 };
 			alignas (64) u64 cascade2[8]{ 10, 0, 0, 2, 0, 0, 5, 1 };
@@ -405,7 +405,7 @@ namespace ui512aTests
 			//		first lane by lane gives three carries (including overflow) lanes 0, 3, 6
 			//		causes second iteration of carry in adds, causing carry in lane 5
 			overflow = add_u(sum, cascade1, cascade2);
-			Assert::AreEqual(1, overflow);
+			Assert::AreEqual((s16)1, overflow);
 			Assert::AreEqual((u64)9, sum[0]);
 			Assert::AreEqual((u64)0, sum[1]);
 			Assert::AreEqual((u64)1, sum[2]);
@@ -425,14 +425,14 @@ namespace ui512aTests
 				};
 				// add test: "random" number plus ones complement should equal 0xfff..., no carries or overflow
 				overflow = add_u(sum, num1, num2);
-				Assert::AreEqual(0, overflow);
+				Assert::AreEqual((s16)0, overflow);
 				for (int j = 0; j < 8; j++)
 				{
 					Assert::AreEqual(0xFFFFFFFFFFFFFFFFull, sum[j]);
 				};
 				// now add one, should cascade carries through all eight, making them each zero, and overflow
 				overflow = add_u(sum, sum, one);		// Note:  Destination (sum) is also an operand
-				Assert::AreEqual(1, overflow);
+				Assert::AreEqual((s16)1, overflow);
 				for (int j = 0; j < 8; j++)
 				{
 					Assert::AreEqual(0x0000000000000000ull, sum[j]);
@@ -446,25 +446,38 @@ namespace ui512aTests
 				};
 				// add test: "random" number plus ones complement should equal 0xfff..., no carries or overflow
 				overflow = add_u(num1, num1, num2);
-				Assert::AreEqual(0, overflow);
+				Assert::AreEqual((s16)0, overflow);
 				for (int j = 0; j < 8; j++)
 				{
 					Assert::AreEqual(0xFFFFFFFFFFFFFFFFull, num1[j]);
 				};
 				// now add one, should cascade carries through all eight, making them each zero, and overflow
 				overflow = add_u(num1, num1, one);		// Note:  Destination (sum) is also an operand
-				Assert::AreEqual(overflow, 1);
+				Assert::AreEqual((s16)1, overflow);
 				for (int j = 0; j < 8; j++)
 				{
 					Assert::AreEqual(0x0000000000000000ull, num1[j]);
 				};
 
+				zero_u(num1);
+				zero_u(num2);
 				for (int j = 0; j < 8; j++)
 				{
+
 					num1[j] = RandomU64(&seed);
 					num2[j] = RandomU64(&seed);
 					sum[j] = 0;
 				};
+				u16 nRzeros = RandomU64(&seed) % 4;
+				for (u16 k = 0; k < nRzeros; k++) {
+					s16 kk = RandomU64(&seed) % 7;
+					num1[kk] = 0;
+				}
+				nRzeros = RandomU64(&seed) % 4;
+				for (u16 k = 0; k < nRzeros; k++) {
+					s16 kk = RandomU64(&seed) % 7;
+					num2[kk] = 0;
+				}
 
 				overflow = add_u(sum, num1, num2);
 				if (overflow)
@@ -481,6 +494,15 @@ namespace ui512aTests
 						Logger::WriteMessage("Overflow error: false negative");
 					};
 				}
+
+				//alignas (64) u64 addsub[8]{ 0, 0, 0, 0, 0, 0, 0, 0 };
+				//s16 overflow2 = 0;
+				//overflow2 = sub_u(addsub, num1, num2);
+				//Assert::AreEqual(overflow, overflow2);
+				//for (int j = 0; j < 8; j++)
+				//{
+				//	Assert::AreEqual(sum[j], addsub[j]);
+				//};
 
 			};
 
