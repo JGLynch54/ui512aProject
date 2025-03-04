@@ -126,16 +126,18 @@ compare_u		PROC			PUBLIC
 				VMOVDQA64		ZMM31, ZM_PTR [ RDX ]
 				VPCMPUQ			K1, ZMM30, ZMM31, CPLT				; in-lane compare 8 words for 'less than'
 				KMOVW			R8D, K1
+				OR				R8D, mskHex100
 				SHL				R8D, 1								; shift to get bits 2 through 8
-				BSR				R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
+				BSF				R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
 				VPCMPUQ			K2, ZMM30, ZMM31, CPGT				; do the same for 'greater than'
 				KMOVW			EAX, K2
+				OR				EAX, mskHex100
 				SHL				EAX, 1
-				BSR				EAX, EAX
-				CMP				EAX, R8D							; compare: which is most significant? LT or GT? (or zero - equal)
+				BSF				EAX, EAX
+				CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
 				MOV				EAX, ret0
-				CMOVA			EAX, ret1
-				CMOVB			EAX, ret_1
+				CMOVG			EAX, ret1
+				CMOVL			EAX, ret_1
 				RET
 
 	ELSEIF	__UseY
@@ -143,61 +145,48 @@ compare_u		PROC			PUBLIC
 				VMOVDQA64		YMM2, YM_PTR [ RDX + 4 * 8 ]
 				VPCMPUQ			K1, YMM0, YMM2, CPLT				; in-lane compare
 				KMOVB			R8D, K1
+				OR				R8D, mskHex100
 				SHL				R8D, 1								; shift so zero bit is one bit (so it doesnt get lost in BSR)
 				BSR				R8D, R8D							; find most significant "LT" word
 				VPCMPUQ			K1, YMM0, YMM2, CPGT				; repeat for "GT"
 				KMOVB			EAX, K1
+				OR				EAX, mskHex100
 				SHL				EAX, 1
 				BSR				EAX, EAX
-				CMP				EAX, R8D							; most significant (eiither LT or GT), else fall through to look at least significant 4 qwords
+				CMP				R8D, EAX							; most significant (eiither LT or GT), else fall through to look at least significant 4 qwords
 				JNE				@F
 				VMOVDQA64		YMM1, YM_PTR [ RCX + 0 * 8 ]
 				VMOVDQA64		YMM3, YM_PTR [ RDX + 0 * 8 ]
 				VPCMPUQ			K2, YMM1, YMM3, CPLT
 				KMOVB			R8D, K2
+				OR				R8D, mskHex100
 				SHL				R8D, 1								; shift so zero bit is one bit (so it doesnt get lost in BSR)
 				BSR				R8D, R8D
 				VPCMPUQ			K2, YMM1, YMM3, CPGT
 				KMOVB			EAX, K2
+				OR				EAX, mskHex100
 				SHL				EAX, 1
 				BSR				EAX, EAX
-				CMP				EAX, R8D	
+				CMP				R8D, EAX	
 @@:
-				CMOVE			EAX, ret0
-				CMOVA			EAX, ret1
-				CMOVB			EAX, ret_1
+				MOV				EAX, ret0
+				CMOVG			EAX, ret1
+				CMOVL			EAX, ret_1
 				RET
 
 	ELSE
 
-				MOV				RAX, [ RCX + 0 * 8 ]
-				CMP				RAX, [ RDX + 0 * 8 ]
+; FOR EACH index of 0 thru 7 : fetch qword of lh_op, compare to qword of rh_op; jump to exit if not equal
+				FOR				idx, < 0, 1, 2, 3, 4, 5, 6, 7 >
+				MOV				RAX, [ RCX + idx * 8 ]
+				CMP				RAX, [ RDX + idx * 8 ]
 				JNZ				@F
-				MOV				RAX, [ RCX + 1 * 8 ]
-				CMP				RAX, [ RDX + 1 * 8 ]
-				JNZ				@F
-				MOV				RAX, [ RCX + 2 * 8 ]
-				CMP				RAX, [ RDX + 2 * 8 ]
-				JNZ				@F
-				MOV				RAX, [ RCX + 3 * 8 ]
-				CMP				RAX, [ RDX + 3 * 8 ]
-				JNZ				@F
-				MOV				RAX, [ RCX + 4 * 8 ]
-				CMP				RAX, [ RDX + 4 * 8 ]
-				JNZ				@F
-				MOV				RAX, [ RCX + 5 * 8 ]
-				CMP				RAX, [ RDX + 5 * 8 ]
-				JNZ				@F
-				MOV				RAX, [ RCX + 6 * 8 ]
-				CMP				RAX, [ RDX + 6 * 8 ]
-				JNZ				@F
-				MOV				RAX, [ RCX + 7 * 8 ]
-				CMP				RAX, [ RDX + 7 * 8 ]
-				JNZ				@F
+				ENDM
 
-@@:				MOV				RAX, 0
-				CMOVA			EAX, ret1
-				CMOVB			EAX, ret_1
+@@:
+				MOV				RAX, 0
+				CMOVG			EAX, ret1
+				CMOVL			EAX, ret_1
 				RET
 	ENDIF
 compare_u		ENDP 
@@ -222,34 +211,28 @@ compare_uT64	PROC			PUBLIC
 				VPBROADCASTQ 	ZMM31 {k1}{z}, RDX					; load rh_op parameter (both now in Z regs)
 				VPCMPUQ			K1, ZMM30, ZMM31, CPLT				; in-lane compare for LT
 				KMOVW			R8D, K1
-				SHL				R8D, 1
-				BSR				R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
+				OR				R8D, mskHex100
+				SHL				R8D, 1								; shift to get bits 2 through 8
+				BSF				R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
 				VPCMPUQ			K2, ZMM30, ZMM31, CPGT				; do the same for 'greater than'
 				KMOVW			EAX, K2
+				OR				EAX, mskHex100
 				SHL				EAX, 1
-				BSR				EAX, EAX
-				CMP				EAX, R8D							; compare: which is most significant? LT or GT? (or zero - equal)
+				BSF				EAX, EAX
+				CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
 				MOV				EAX, ret0
-				CMOVA			EAX, ret1
-				CMOVB			EAX, ret_1
+				CMOVG			EAX, ret1
+				CMOVL			EAX, ret_1
 				RET
 
 	ELSE
 				XOR				RAX, RAX
-				CMP				Q_PTR [ RCX + 0 * 8 ], RAX
+; FOR EACH index 0 thru 6: Get minuend QWORD, compare for zero 
+				FOR				idx, < 0, 1, 2, 3, 4, 5, 6 >
+				CMP				Q_PTR [ RCX + idx * 8 ], RAX
 				JNZ				@F
-				CMP				Q_PTR [ RCX + 1 * 8 ], RAX
-				JNZ				@F
-				CMP				Q_PTR [ RCX + 2 * 8 ], RAX
-				JNZ				@F
-				CMP				Q_PTR [ RCX + 3 * 8 ], RAX
-				JNZ				@F
-				CMP				Q_PTR [ RCX + 4 * 8 ], RAX
-				JNZ				@F
-				CMP				Q_PTR [ RCX + 5 * 8 ], RAX
-				JNZ				@F
-				CMP				Q_PTR [ RCX + 6 * 8 ], RAX
-				JNZ				@F	
+				ENDM
+
 				MOV				RAX, [ RCX + 7 * 8 ]
 				CMP				RAX, RDX 
 				JNZ				@F
@@ -292,13 +275,13 @@ add_u			PROC			PUBLIC
 				VMOVDQA64		ZMM30, ZM_PTR [RDX]					; ZMM30 = addend1 (8 QWORDs)
 				VMOVDQA64		ZMM31, ZM_PTR [R8]					; ZMM31 = addend2 (8 QWORDs)
 
-; Set up loop variables: R9 to be broadcast for adding carries, RAX for tracking all the carries
+; Set up loop variables: R9 to be broadcast for adding carries (a one), RAX for tracking all the carries
 				XOR				R9, R9
 				INC				R9
 				XOR				RAX, RAX							; Carry flag and return code, persistant through iterations
 
 ; Initial addition
-				VPADDQ		    ZMM29, ZMM30, ZMM31					; ZMM29 = addend1 + addend2 (lane-wise)
+				VPADDQ		    ZMM29, ZMM30, ZMM31					; ZMM29 = addend1 + addend2 (lane-by-lane)
 
 ; Compute carries from (first) in-lane addition
 				VPCMPUQ		    K1, ZMM29, ZMM30, CPLT				; k1[i] = 1 if sum[i] < addend1[i] (carry out of lane i)
@@ -306,13 +289,12 @@ add_u			PROC			PUBLIC
 ; Examine computed carries: Most sig bit? indicates overall carry overflow; shift to align, if then none? we are done; 
 @@checkcarry:
 				KMOVB			R8, K1								; Mask bits results (from compare above) in k1 to R8 
-				ANDN			R8, RAX, R8							; Ignore carries already added in. Do these carries, AND NOT carries already done
+				ANDN			R8, RAX, R8							; Ignore carries already added in. Do THESE carries, AND NOT carries already done
 				OR				RAX, R8								; Keep these carries, along with the prior carries
 				SHR				R8, 1								; Shift right: carry-in for each lane (from lane i+1 to i)	
 				JZ				@@saveexit							; if, after alignment shift, there are no carries: save and exit
 
-; anything else, and for as long as these additions cause carries, add one to each carried into SIMD lane			
-						
+; anything else, and for as long as these additions cause carries, add one to each carried into SIMD lane
 				KMOVB			K1, R8
 				VPBROADCASTQ	ZMM28 { k1 } { z }, R9				; ZMM28 = carry-ins broadcast to selected lanes, zero non-selected lanes
 				VPADDQ			ZMM29 { k1 }, ZMM29, ZMM28			; Add carry-ins to selected lanes
@@ -320,7 +302,6 @@ add_u			PROC			PUBLIC
 				JMP				@@checkcarry
 
 ; store final sum
-
 @@saveexit:
 				AND				RAX, 1								; Bit 1 signifies a carry out of most significant word (an overflow) -> return code
 				VMOVDQA64		ZM_PTR [RCX], ZMM29					; Store final sum
@@ -332,33 +313,12 @@ add_u			PROC			PUBLIC
 				ADD				RAX, [ R8 + 7 * 8 ]
 				MOV				[ RCX + 7 * 8 ], RAX
 
-				MOV				RAX, [ RDX + 6 * 8 ]
-				ADCX			RAX, [ R8 + 6 * 8 ]
-				MOV				[ RCX + 6 * 8 ] , RAX
-
-				MOV				RAX, [ RDX + 5 * 8 ]
-				ADCX			RAX, [ R8 + 5 * 8 ]
-				MOV				[ RCX + 5 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 4 * 8 ]
-				ADCX			RAX, [ R8 + 4 * 8 ]
-				MOV				[ RCX + 4 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 3 * 8 ]
-				ADCX			RAX, [ R8 + 3 * 8 ]
-				MOV				[ RCX + 3 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 2 * 8 ]
-				ADCX			RAX, [ R8 + 2 * 8 ]
-				MOV				[ RCX + 2 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 1 * 8 ]
-				ADCX			RAX, [ R8 + 1 * 8 ]
-				MOV				[ RCX + 1 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 0 * 8 ]
-				ADCX			RAX, [ R8 + 0 * 8 ]
-				MOV				[ RCX + 0 * 8 ], RAX
+; FOR EACH index of 6 thru 0 : fetch qword of addend1 (RDX), add (with carry) to qword of addend2; store at callers sum			
+				FOR				idx, < 6, 5, 4, 3, 2, 1, 0 >
+				MOV				RAX, [ RDX + idx * 8 ]
+				ADCX			RAX, [ R8 + idx * 8 ]
+				MOV				[ RCX + idx * 8 ] , RAX
+				ENDM
 
 				MOV				RAX, 0							; return carry flag as overflow
 				CMOVC			EAX, ret1
@@ -407,8 +367,7 @@ add_uT64		PROC			PUBLIC
 				SHR				R8, 1								; Shift right: carry-in for each lane (from lane i+1 to i)	
 				JZ				@@saveexit							; If, after alignment shift, there are no carries, save and exit
 
-; anything else, and for as long as these additions cause carries, add one to each carried into SIMD lane			
-						
+; anything else, and for as long as these additions cause carries, add one to each carried into SIMD lane
 				KMOVB			K1, R8
 				VPBROADCASTQ	ZMM28 { k1 } { z }, R9				; ZMM28 = carry-ins broadcast to selected lanes, zero non-selected lanes
 				VPADDQ			ZMM29 { k1 }, ZMM29, ZMM28			; Add carry-ins to selected lanes
@@ -416,7 +375,6 @@ add_uT64		PROC			PUBLIC
 				JMP				@@checkcarry
 
 ; store final sum
-
 @@saveexit:
 				AND				RAX, 1								; Bit 1 signifies a carry out of most significant word (an overflow) -> return code
 				VMOVDQA64		ZM_PTR [RCX], ZMM29					; Store final sum
@@ -427,34 +385,13 @@ add_uT64		PROC			PUBLIC
 				MOV				RAX, [ RDX + 7 * 8 ]
 				ADD				RAX, R8 
 				MOV				[ RCX + 7 * 8 ], RAX
-; Second (and consecutive til done) Get addend QWORD, add zero, but with carry if any from previous add
-				MOV				RAX, [ RDX + 6 * 8 ]
+; FOR EACH index 6 thru 0: Get addend QWORD, add zero, but with carry if any from previous add
+				FOR				idx, < 6, 5, 4, 3, 2, 1, 0 >
+				MOV				RAX, [ RDX + idx * 8 ]
 				ADC				RAX, 0
-				MOV				[ RCX + 6 * 8 ], RAX
+				MOV				[ RCX + idx * 8 ], RAX
+				ENDM
 
-				MOV				RAX, [ RDX + 5 * 8 ]
-				ADC				RAX, 0
-				MOV				[ RCX + 5 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 4 * 8 ]
-				ADC				RAX, 0
-				MOV				[ RCX + 4 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 3 * 8 ]
-				ADC				RAX, 0
-				MOV				[ RCX + 3 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 2 * 8 ]
-				ADC				RAX, 0
-				MOV				[ RCX + 2 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 1 * 8 ]
-				ADC				RAX, 0
-				MOV				[ RCX + 1 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 0 * 8 ]
-				ADC				RAX, 0
-				MOV				[ RCX + 0 * 8 ], RAX
 ; return zero unless carry still exists from addition
 				MOV				EAX, ret0
 				CMOVC			EAX, ret1
@@ -520,33 +457,12 @@ sub_u			PROC			PUBLIC
 				SUB				RAX, [ R8 + 7 * 8 ]					; subtract last word of subrahend (the number to be subtracted) (right-hand operand)
 				MOV				[ RCX + 7 * 8 ], RAX				; store result in last word of difference, note: the flag 'carry' has been set to whether there has been a 'borrow'
 
-				MOV				RAX, [ RDX + 6 * 8]					; same as above for next word, but use 'sbb' to bring the 'borrow' to this op
-				SBB				RAX, [ R8 + 6 * 8 ]
-				MOV				[ RCX + 6 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 5 * 8 ]
-				SBB				RAX, [ R8+ 5 * 8 ]
-				MOV				[ RCX + 5 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 4 * 8 ]
-				SBB				RAX, [ R8 + 4 * 8 ]
-				MOV				[ RCX + 4 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 3 * 8 ]
-				SBB				RAX, [ R8 + 3 * 8 ]
-				MOV				[ RCX + 3 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 2 * 8 ]
-				SBB				RAX, [ R8 + 2 * 8 ]
-				MOV				[ RCX + 2 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 1 * 8 ]
-				SBB 			RAX, [ R8 + 1 * 8 ]
-				MOV				[ RCX + 1 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 0 * 8 ]
-				SBB				RAX, [ R8 + 0 * 8 ]
-				MOV				[ RCX + 0 * 8 ], RAX
+; FOR EACH index 6 thru 0: Get minuend QWORD, subtract (with borrow), store at difference
+				FOR				idx, < 6, 5, 4, 3, 2, 1, 0 >
+				MOV				RAX, [ RDX + idx * 8]					
+				SBB				RAX, [ R8 + idx * 8 ]
+				MOV				[ RCX + idx * 8 ], RAX
+				ENDM
 
 				MOV				RAX, 0								; return, set return code to zero if no remaining borrow, to one if there is a borrow
 				CMOVC			EAX, ret1
@@ -611,33 +527,12 @@ sub_uT64		PROC			PUBLIC
 				SUB				RAX, R8
 				MOV				[ RCX + 7 * 8 ], RAX
 
-				MOV				RAX, [ RDX + 6 * 8 ] 
+; FOR EACH index 6 thru 0: Get minuend QWORD, subtract borrow (if any), store at difference
+				FOR				idx, < 6, 5, 4, 3, 2, 1, 0 >
+				MOV				RAX, [ RDX + idx * 8]					
 				SBB				RAX, 0
-				MOV				[ RCX + 6 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 5 * 8 ]
-				SBB				RAX, 0
-				MOV				[ RCX + 5 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 4 * 8 ]
-				SBB				RAX, 0
-				MOV				[ RCX + 4 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 3 * 8 ]
-				SBB				RAX, 0
-				MOV				[ RCX + 3 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 2 * 8 ]
-				SBB				RAX, 0
-				MOV				[ RCX + 2 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 1 * 8 ]
-				SBB 			RAX, 0
-				MOV				[ RCX + 1 * 8 ], RAX
-
-				MOV				RAX, [ RDX + 0 * 8 ]
-				SBB				RAX, 0
-				MOV				[ RCX + 0 * 8 ], RAX
+				MOV				[ RCX + idx * 8 ], RAX
+				ENDM
 
 				MOV				RAX, 0
 				CMOVC			EAX, ret1

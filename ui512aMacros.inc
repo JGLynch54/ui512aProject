@@ -105,10 +105,10 @@ EXTERNDEF		sub_u:PROC
 EXTERNDEF		sub_uT64:PROC
 
 ;			Configuration choices
-__UseZ			EQU				1									; Use AVX4 processor features (512 bit registers and instructions)
+__UseZ			EQU				0									; Use AVX4 processor features (512 bit registers and instructions)
 __UseY			EQU				0									; Use AVX2 processor features (256 bit registers and instructions)
 __UseX			EQU				0									; Use SIMD/SSE processor features (128 bit registers and instructions)
-__UseQ			EQU				0									; Do not use extensions, use standard x64 bit registers and instructions
+__UseQ			EQU				1									; Do not use extensions, use standard x64 bit registers and instructions
 ;
 __CheckAlign	EQU				0									; User is expected to pass arguments aligned on 64 byte boundaries, 
 																	; This setting enforces that with a check. It should not be necessary, but included to help debugging
@@ -143,6 +143,8 @@ MaskBit4		EQU				B_PTR [ 00010000b ]
 MaskBit5		EQU				B_PTR [ 00100000b ]
 MaskBit6		EQU				B_PTR [ 01000000b ]
 MaskBit7		EQU				B_PTR [ 10000000b ]
+
+Mask20			EQU
 ;==========================================================================================
 ;           Notes on x64 calling conventions        aka "fast call"
 ; ref: https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170
@@ -200,6 +202,7 @@ mskB4			DB				16
 mskB5			DB				32
 mskB6			DB				64
 mskB7			DB				128
+mskHex100		DD				0100h
 				ENDM
 
 ;

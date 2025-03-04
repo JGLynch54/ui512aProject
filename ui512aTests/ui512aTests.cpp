@@ -281,7 +281,7 @@ namespace ui512aTests
 		TEST_METHOD(ui512a_04_compare)
 		{
 			u64 seed = 0;
-			s32 eval;
+			s16 eval;
 			alignas (64) u64 num1[8]{ 0, 0, 0, 0, 0, 0, 0, 0 };
 			alignas (64) u64 num2[8]{ 0, 0, 0, 0, 0, 0, 0, 0 };
 
@@ -296,13 +296,17 @@ namespace ui512aTests
 				{
 					num2[j]++;
 					eval = compare_u(num1, num2);		// num1 < num2
-					Assert::AreEqual(-1, eval);
+					if ((s16)-1 != eval)
+					{
+						Logger::WriteMessage(ToString(j).c_str());
+					}
+					Assert::AreEqual((s16)-1, eval);
 					num2[j] -= 2;
 					eval = compare_u(num1, num2);		// num1 > num2
-					Assert::AreEqual(1, eval);
+					Assert::AreEqual((s16)1, eval);
 					num2[j]++;
 					eval = compare_u(num1, num2);		// num1 == num2
-					Assert::AreEqual(0, eval);
+					Assert::AreEqual((s16)0, eval);
 				};
 			};
 
