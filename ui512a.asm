@@ -74,7 +74,6 @@
 ;			destarr		-	Address of destination 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
 ;			returns		-	nothing
 ;
-
 zero_u			PROC			PUBLIC
 				Zero512			RCX									; Zero 512 bit space addressed in RCX (the parameter)
 				RET		
@@ -87,7 +86,7 @@ zero_u			ENDP
 ;			destarr		-	Address of destination 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
 ;			srcarr		-	Address of source 64 byte aligned array of 8 64-bit QWORDS (512 bits) in RDX
 ;			returns		-	nothing
-
+;
 copy_u			PROC			PUBLIC
 				Copy512			RCX, RDX							; Copy 512 bit space from scr array (address in RDX) to dest (RCX)
 				RET	
@@ -100,7 +99,7 @@ copy_u			ENDP
 ;			destarr		-	Address of destination 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
 ;			src			-	u64 value in RDX
 ;			returns		-	nothing
-
+;
 set_uT64		PROC			PUBLIC
 				Zero512			RCX	
 				MOV				Q_PTR [ RCX + 7 * 8 ], RDX
@@ -115,7 +114,7 @@ set_uT64		ENDP
 ;			rh_op		-	Address of RH 64 byte aligned array of 8 64-bit QWORDS (512 bits) in RDX
 ;			returns		-	(0) for equal, -1 for less than, 1 for greater than
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
-
+;
 compare_u		PROC			PUBLIC
 
 				CheckAlign		RCX
@@ -126,12 +125,12 @@ compare_u		PROC			PUBLIC
 				VMOVDQA64		ZMM31, ZM_PTR [ RDX ]
 				VPCMPUQ			K1, ZMM30, ZMM31, CPLT				; in-lane compare 8 words for 'less than'
 				KMOVW			R8D, K1
-				OR				R8D, mskHex100
+				OR				R8D, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
 				SHL				R8D, 1								; shift to get bits 2 through 8
 				BSF				R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
 				VPCMPUQ			K2, ZMM30, ZMM31, CPGT				; do the same for 'greater than'
 				KMOVW			EAX, K2
-				OR				EAX, mskHex100
+				OR				EAX, MASK kMask.b8					; OR in a high bit to make an equal compare not zero				
 				SHL				EAX, 1
 				BSF				EAX, EAX
 				CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
@@ -145,28 +144,28 @@ compare_u		PROC			PUBLIC
 				VMOVDQA64		YMM2, YM_PTR [ RDX + 4 * 8 ]
 				VPCMPUQ			K1, YMM0, YMM2, CPLT				; in-lane compare
 				KMOVB			R8D, K1
-				OR				R8D, mskHex100
+				OR				R8D, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
 				SHL				R8D, 1								; shift so zero bit is one bit (so it doesnt get lost in BSR)
-				BSR				R8D, R8D							; find most significant "LT" word
+				BSF				R8D, R8D							; find most significant "LT" word
 				VPCMPUQ			K1, YMM0, YMM2, CPGT				; repeat for "GT"
 				KMOVB			EAX, K1
-				OR				EAX, mskHex100
+				OR				EAX, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
 				SHL				EAX, 1
-				BSR				EAX, EAX
+				BSF				EAX, EAX
 				CMP				R8D, EAX							; most significant (eiither LT or GT), else fall through to look at least significant 4 qwords
 				JNE				@F
 				VMOVDQA64		YMM1, YM_PTR [ RCX + 0 * 8 ]
 				VMOVDQA64		YMM3, YM_PTR [ RDX + 0 * 8 ]
 				VPCMPUQ			K2, YMM1, YMM3, CPLT
 				KMOVB			R8D, K2
-				OR				R8D, mskHex100
+				OR				R8D, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
 				SHL				R8D, 1								; shift so zero bit is one bit (so it doesnt get lost in BSR)
-				BSR				R8D, R8D
+				BSF				R8D, R8D
 				VPCMPUQ			K2, YMM1, YMM3, CPGT
 				KMOVB			EAX, K2
-				OR				EAX, mskHex100
+				OR				EAX, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
 				SHL				EAX, 1
-				BSR				EAX, EAX
+				BSF				EAX, EAX
 				CMP				R8D, EAX	
 @@:
 				MOV				EAX, ret0
@@ -199,7 +198,7 @@ compare_u		ENDP
 ;			rh_op		-	The RH 64-bit value in RDX
 ;			returns		-	(0) for equal, -1 for less than, 1 for greater than
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
-
+;
 compare_uT64	PROC			PUBLIC
 				
 				CheckAlign		RCX
@@ -211,12 +210,12 @@ compare_uT64	PROC			PUBLIC
 				VPBROADCASTQ 	ZMM31 {k1}{z}, RDX					; load rh_op parameter (both now in Z regs)
 				VPCMPUQ			K1, ZMM30, ZMM31, CPLT				; in-lane compare for LT
 				KMOVW			R8D, K1
-				OR				R8D, mskHex100
+				OR				R8D, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
 				SHL				R8D, 1								; shift to get bits 2 through 8
 				BSF				R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
 				VPCMPUQ			K2, ZMM30, ZMM31, CPGT				; do the same for 'greater than'
 				KMOVW			EAX, K2
-				OR				EAX, mskHex100
+				OR				EAX, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
 				SHL				EAX, 1
 				BSF				EAX, EAX
 				CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
@@ -252,7 +251,7 @@ compare_uT64 ENDP
 ;			addend2		-	Address of  the 64 byte aligned array of 8 64-bit QWORDS (512 bits) in R8
 ;			returns		-	zero for no carry, 1 for carry (overflow)
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
-
+;
 add_u			PROC			PUBLIC 
 
 				CheckAlign		RCX
@@ -336,7 +335,7 @@ add_u			ENDP
 ;			addend2		-	The 64-bit value in R8
 ;			returns		-	zero for no carry, 1 for carry (overflow)
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
-
+;
 add_uT64		PROC			PUBLIC 
 
 				CheckAlign		RCX
@@ -408,7 +407,7 @@ add_uT64		ENDP
 ;			rh_op		-	Address of the RHOP 8 64-bit QWORDS (512 bits) in R8
 ;			returns		-	zero for no borrow, 1 for borrow (underflow)
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
-
+;
 sub_u			PROC			PUBLIC 
 
 				CheckAlign		RCX
@@ -479,7 +478,7 @@ sub_u			ENDP
 ;			rh_op		-	64-bitvalue in R8
 ;			returns		-	zero for no borrow, 1 for borrow (underflow)
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
-
+;
 sub_uT64		PROC			PUBLIC 
 
 				CheckAlign		RCX

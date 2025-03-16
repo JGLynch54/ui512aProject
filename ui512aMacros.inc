@@ -1,4 +1,4 @@
-.nolist
+.NOLIST
 ;
 ;			ui512aMacros
 ;
@@ -55,7 +55,7 @@
 ;				OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;				SOFTWARE.
 ;
-.list
+.LIST
 IFNDEF			ui512aMacros_INC
 ui512aMacros_INC EQU		<1>
 
@@ -105,10 +105,10 @@ EXTERNDEF		sub_u:PROC
 EXTERNDEF		sub_uT64:PROC
 
 ;			Configuration choices
-__UseZ			EQU				0									; Use AVX4 processor features (512 bit registers and instructions)
+__UseZ			EQU				1									; Use AVX4 processor features (512 bit registers and instructions)
 __UseY			EQU				0									; Use AVX2 processor features (256 bit registers and instructions)
 __UseX			EQU				0									; Use SIMD/SSE processor features (128 bit registers and instructions)
-__UseQ			EQU				1									; Do not use extensions, use standard x64 bit registers and instructions
+__UseQ			EQU				0									; Do not use extensions, use standard x64 bit registers and instructions
 ;
 __CheckAlign	EQU				0									; User is expected to pass arguments aligned on 64 byte boundaries, 
 																	; This setting enforces that with a check. It should not be necessary, but included to help debugging
@@ -144,7 +144,8 @@ MaskBit5		EQU				B_PTR [ 00100000b ]
 MaskBit6		EQU				B_PTR [ 01000000b ]
 MaskBit7		EQU				B_PTR [ 10000000b ]
 
-Mask20			EQU
+;			Another way to get masks
+kMask			RECORD			b8:1, b7:1, b6:1, b5:1, b4:1, b3:1, b2:1, b1:1, b0:1
 ;==========================================================================================
 ;           Notes on x64 calling conventions        aka "fast call"
 ; ref: https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170
@@ -176,7 +177,6 @@ Mask20			EQU
 ;			Test passed variable addresses for 64 byte alignment
 ;			Note: Better performance if this is off, but for debugging, maybe have it on
 ;
-
 CheckAlign		MACRO			Raddr
 				LOCAL			ok
 	IF	__CheckAlign
@@ -208,7 +208,6 @@ mskHex100		DD				0100h
 ;
 ;			Zero a 512 bit destination, conditional assembly based on configuration parameters
 ;
-
 Zero512			MACRO			dest
 				CheckAlign		dest
 	IF	__UseZ
@@ -241,7 +240,6 @@ Zero512			MACRO			dest
 ;
 ;			Copy a 512 bit source to destination, conditional assembly based on configuration parameters
 ;
-
 Copy512			MACRO			dest, src
 				CheckAlign		dest
 				CheckAlign		src
@@ -288,7 +286,6 @@ Copy512			MACRO			dest, src
 ;			Example usage: GetZatIdx R11, ZMM1, MaskBit2 or SetZatIdx ZMM1, R12, [ R9 ]  (where R9 is a bit mask, not an integer index)
 ;			Note: These are req to reg ops; no memory fetches (other than instructions from pipeline)
 ;
-
 GetZatMask		MACRO			dest, src, mask
 				LEA				RAX,  mask
 				KMOVB			k1, RAX
@@ -302,7 +299,6 @@ GetZatMask		MACRO			dest, src, mask
 ;			Example usage: SetZatIdx ZMM1, R8, MaskBit2
 ;			Note: These are req to reg ops; no memory fetches (other than instructions from pipeline)
 ;
-
 SetZatMask		MACRO			dest, src, mask
 				LEA				RAX, mask
 				KMOVB			k1, RAX
