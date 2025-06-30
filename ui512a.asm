@@ -102,7 +102,7 @@ copy_u			ENDP
 ;
 set_uT64		PROC			PUBLIC
 				Zero512			RCX	
-				MOV				Q_PTR [ RCX + 7 * 8 ], RDX
+				MOV				Q_PTR [ RCX ] [ 7 * 8 ], RDX
 				RET	
 set_uT64		ENDP
 
@@ -112,7 +112,7 @@ set_uT64		ENDP
 ;			Prototype:		extern "C" s32 compare_u( u64* lh_op, u64* rh_op )
 ;			lh_op		-	Address of LH 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
 ;			rh_op		-	Address of RH 64 byte aligned array of 8 64-bit QWORDS (512 bits) in RDX
-;			returns		-	(0) for equal, -1 for less than, 1 for greater than
+;			returns		-	(0) for equal, -1 for lh_op is less than rh_op, 1 for lh_op is greater than rh_op 
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 ;
 compare_u		PROC			PUBLIC
@@ -135,13 +135,13 @@ compare_u		PROC			PUBLIC
 				BSF				EAX, EAX
 				CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
 				MOV				EAX, ret0
-				CMOVG			EAX, ret1
-				CMOVL			EAX, ret_1
+				CMOVA			EAX, ret1
+				CMOVB			EAX, ret_1
 				RET
 
 	ELSEIF	__UseY
-				VMOVDQA64		YMM0, YM_PTR [ RCX + 4 * 8 ]		; load most significant 4 qwords of parameters
-				VMOVDQA64		YMM2, YM_PTR [ RDX + 4 * 8 ]
+				VMOVDQA64		YMM0, YM_PTR [ RCX ] [ 4 * 8 ]		; load most significant 4 qwords of parameters
+				VMOVDQA64		YMM2, YM_PTR [ RDX ] [ 4 * 8 ]
 				VPCMPUQ			K1, YMM0, YMM2, CPLT				; in-lane compare
 				KMOVB			R8D, K1
 				OR				R8D, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
@@ -154,8 +154,8 @@ compare_u		PROC			PUBLIC
 				BSF				EAX, EAX
 				CMP				R8D, EAX							; most significant (eiither LT or GT), else fall through to look at least significant 4 qwords
 				JNE				@F
-				VMOVDQA64		YMM1, YM_PTR [ RCX + 0 * 8 ]
-				VMOVDQA64		YMM3, YM_PTR [ RDX + 0 * 8 ]
+				VMOVDQA64		YMM1, YM_PTR [ RCX ] [ 0 * 8 ]
+				VMOVDQA64		YMM3, YM_PTR [ RDX ] [ 0 * 8 ]
 				VPCMPUQ			K2, YMM1, YMM3, CPLT
 				KMOVB			R8D, K2
 				OR				R8D, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
@@ -169,23 +169,23 @@ compare_u		PROC			PUBLIC
 				CMP				R8D, EAX	
 @@:
 				MOV				EAX, ret0
-				CMOVG			EAX, ret1
-				CMOVL			EAX, ret_1
+				CMOVA			EAX, ret1
+				CMOVB			EAX, ret_1
 				RET
 
 	ELSE
 
 ; FOR EACH index of 0 thru 7 : fetch qword of lh_op, compare to qword of rh_op; jump to exit if not equal
 				FOR				idx, < 0, 1, 2, 3, 4, 5, 6, 7 >
-				MOV				RAX, [ RCX + idx * 8 ]
-				CMP				RAX, [ RDX + idx * 8 ]
+				MOV				RAX, Q_PTR [ RCX ] [ idx * 8 ]
+				CMP				RAX, Q_PTR [ RDX ] [ idx * 8 ]
 				JNZ				@F
 				ENDM
 
 @@:
 				MOV				RAX, 0
-				CMOVG			EAX, ret1
-				CMOVL			EAX, ret_1
+				CMOVA			EAX, ret1							; 'above' is greater than for an unsigned integer
+				CMOVB			EAX, ret_1							; 'below' is less than for an unsigned integer
 				RET
 	ENDIF
 compare_u		ENDP 
@@ -220,24 +220,24 @@ compare_uT64	PROC			PUBLIC
 				BSF				EAX, EAX
 				CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
 				MOV				EAX, ret0
-				CMOVG			EAX, ret1
-				CMOVL			EAX, ret_1
+				CMOVA			EAX, ret1
+				CMOVB			EAX, ret_1
 				RET
 
 	ELSE
 				XOR				RAX, RAX
 ; FOR EACH index 0 thru 6: Get minuend QWORD, compare for zero 
 				FOR				idx, < 0, 1, 2, 3, 4, 5, 6 >
-				CMP				Q_PTR [ RCX + idx * 8 ], RAX
+				CMP				Q_PTR [ RCX ] [ idx * 8 ], RAX
 				JNZ				@F
 				ENDM
 
-				MOV				RAX, [ RCX + 7 * 8 ]
+				MOV				RAX, Q_PTR [ RCX ] [ 7 * 8 ]
 				CMP				RAX, RDX 
 				JNZ				@F
 				XOR				EAX, EAX
-@@:				CMOVG			EAX, ret1
-				CMOVL			EAX, ret_1
+@@:				CMOVA			EAX, ret1							; 'above' is greater than for an unsigned integer
+				CMOVB			EAX, ret_1							; 'below' is less than for an unsigned integer
 				RET
 	ENDIF
 compare_uT64 ENDP
@@ -307,19 +307,18 @@ add_u			PROC			PUBLIC
 				RET													; EAX carries return code (from carry computation above)
 
 	ELSE
-
-				MOV				RAX, [ RDX + 7 * 8 ]
-				ADD				RAX, [ R8 + 7 * 8 ]
-				MOV				[ RCX + 7 * 8 ], RAX
+				MOV				RAX, Q_PTR [ RDX ] [ 7 * 8 ]
+				ADD				RAX, Q_PTR [ R8 ] [ 7 * 8 ]
+				MOV				Q_PTR [ RCX ] [ 7 * 8 ], RAX
 
 ; FOR EACH index of 6 thru 0 : fetch qword of addend1 (RDX), add (with carry) to qword of addend2; store at callers sum			
 				FOR				idx, < 6, 5, 4, 3, 2, 1, 0 >
-				MOV				RAX, [ RDX + idx * 8 ]
-				ADCX			RAX, [ R8 + idx * 8 ]
-				MOV				[ RCX + idx * 8 ] , RAX
+				MOV				RAX, Q_PTR [ RDX ] [ idx * 8 ]
+				ADCX			RAX, Q_PTR [ R8 ] [ idx * 8 ]
+				MOV				Q_PTR [ RCX ] [ idx * 8 ] , RAX
 				ENDM
 
-				MOV				RAX, 0							; return carry flag as overflow
+				MOV				RAX, 0								; return carry flag as overflow
 				CMOVC			EAX, ret1
 				RET	
 
@@ -381,14 +380,14 @@ add_uT64		PROC			PUBLIC
 	ELSE
 
 ; First Addition, Get Least significant QWORD of addend, Add passed QWORD to it
-				MOV				RAX, [ RDX + 7 * 8 ]
+				MOV				RAX, Q_PTR [ RDX ] [ 7 * 8 ]
 				ADD				RAX, R8 
-				MOV				[ RCX + 7 * 8 ], RAX
+				MOV				Q_PTR [ RCX ] [ 7 * 8 ], RAX
 ; FOR EACH index 6 thru 0: Get addend QWORD, add zero, but with carry if any from previous add
 				FOR				idx, < 6, 5, 4, 3, 2, 1, 0 >
-				MOV				RAX, [ RDX + idx * 8 ]
-				ADC				RAX, 0
-				MOV				[ RCX + idx * 8 ], RAX
+				MOV				RAX, Q_PTR [ RDX ] [ idx * 8 ]
+				ADCX			RAX, zeroQ
+				MOV				Q_PTR [ RCX ] [ idx * 8 ], RAX
 				ENDM
 
 ; return zero unless carry still exists from addition
@@ -452,15 +451,15 @@ sub_u			PROC			PUBLIC
 
 	ELSE
 
-				MOV				RAX, [ RDX + 7 * 8 ]				; get last word of minuend (least significant word of the number we are subtracting from) (left-hand operand)
-				SUB				RAX, [ R8 + 7 * 8 ]					; subtract last word of subrahend (the number to be subtracted) (right-hand operand)
-				MOV				[ RCX + 7 * 8 ], RAX				; store result in last word of difference, note: the flag 'carry' has been set to whether there has been a 'borrow'
+				MOV				RAX, Q_PTR [ RDX ] [ 7 * 8 ]		; get last word of minuend (least significant word of the number we are subtracting from) (left-hand operand)
+				SUB				RAX, Q_PTR [ R8 ] [ 7 * 8 ]			; subtract last word of subrahend (the number to be subtracted) (right-hand operand)
+				MOV				Q_PTR [ RCX ] [ 7 * 8 ], RAX		; store result in last word of difference, note: the flag 'carry' has been set to whether there has been a 'borrow'
 
 ; FOR EACH index 6 thru 0: Get minuend QWORD, subtract (with borrow), store at difference
 				FOR				idx, < 6, 5, 4, 3, 2, 1, 0 >
-				MOV				RAX, [ RDX + idx * 8]					
-				SBB				RAX, [ R8 + idx * 8 ]
-				MOV				[ RCX + idx * 8 ], RAX
+				MOV				RAX, [ RDX ] [ idx * 8 ]					
+				SBB				RAX, [ R8 ] [ idx * 8 ]
+				MOV				[ RCX ] [ idx * 8 ], RAX
 				ENDM
 
 				MOV				RAX, 0								; return, set return code to zero if no remaining borrow, to one if there is a borrow
@@ -522,15 +521,15 @@ sub_uT64		PROC			PUBLIC
 				RET
 
 	ELSE
-				MOV				RAX, [ RDX + 7 * 8 ]		; 
+				MOV				RAX, [ RDX ] [ 7 * 8 ]		; 
 				SUB				RAX, R8
-				MOV				[ RCX + 7 * 8 ], RAX
+				MOV				[ RCX ] [ 7 * 8 ], RAX
 
 ; FOR EACH index 6 thru 0: Get minuend QWORD, subtract borrow (if any), store at difference
 				FOR				idx, < 6, 5, 4, 3, 2, 1, 0 >
-				MOV				RAX, [ RDX + idx * 8]					
+				MOV				RAX, [ RDX ] [ idx * 8 ]					
 				SBB				RAX, 0
-				MOV				[ RCX + idx * 8 ], RAX
+				MOV				[ RCX ] [ idx * 8 ], RAX
 				ENDM
 
 				MOV				RAX, 0

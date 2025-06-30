@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler (x64) Version 14.43.34809.0   03/15/25 21:30:36
+Microsoft (R) Macro Assembler (x64) Version 14.44.35209.0   06/29/25 21:46:13
 ui512a.asm						     Page 1 - 1
 
 
@@ -67,7 +67,7 @@ ui512a.asm						     Page 1 - 1
 			      C .NOLIST
 			      C .LIST
 			      C IFNDEF			ui512aMacros_INC
- = 1			      C ui512aMacros_INC EQU		<1>
+ = 1			      C ui512aMacros_INC EQU			<1>
 			      C 
 			      C ;           header file equivalent extern declarations
 			      C ;			EXTERN "C" signatures (from ui512a.asm)
@@ -192,12 +192,15 @@ ui512a.asm						     Page 1 - 1
 			      C 	IF	__CheckAlign
 			      C 				TEST			Raddr, 63							; Is specified param aligned 64?
 			      C 				JZ				ok									; Yes, passes test, continue
-			      C 				INT				0									; No, fails, break (can substitute other exception handling)
+			      C 				INT				0									; No? fails, break (can substitute other exception handling)
 			      C ok:
 			      C 	ENDIF
 			      C 				ENDM
 			      C 
 			      C MemConstants	MACRO
+			      C ;
+			      C zeroQ			DQ				0
+			      C mskHex100		DD				0100h
 			      C ;		Return codes commonly used.			
 			      C ret0			DD				0								
 			      C ret1			DD				1
@@ -212,82 +215,91 @@ ui512a.asm						     Page 1 - 1
 			      C mskB5			DB				32
 			      C mskB6			DB				64
 			      C mskB7			DB				128
-			      C mskHex100		DD				0100h
+			      C ;
+			      C 				ALIGN			8									; realign
 			      C 				ENDM
 			      C 
 			      C ;
 			      C ;			Zero a 512 bit destination, conditional assembly based on configuration parameters
 			      C ;
-			      C Zero512			MACRO			dest
+			      C Zero512			MACRO			dest:REQ
+			      C 	IF		__UseZ
 			      C 				CheckAlign		dest
-			      C 	IF	__UseZ
 			      C 				VPXORQ			ZMM31, ZMM31, ZMM31
 			      C 				VMOVDQA64		ZM_PTR [ dest ], ZMM31
 			      C 	ELSEIF	__UseY
+			      C 				CheckAlign		dest
 			      C 				VPXORQ			YMM4, YMM4, YMM4
-			      C 				VMOVDQA64		YM_PTR [ dest + 0 * 8 ], YMM4
-			      C 				VMOVDQA64		YM_PTR [ dest + 4 * 8 ], YMM4
+			      C 				FOR				idx, < 0, 4 >
+			      C 				VMOVDQA64		YM_PTR [ dest ] [ idx * 8 ], YMM4
+			      C 				ENDM
 			      C 	ELSEIF	__UseX
+			      C 				CheckAlign		dest
 			      C 				PXOR			XMM4, XMM4
-			      C 				MOVDQA			XM_PTR [ dest + 0 * 8 ], XMM4
-			      C 				MOVDQA			XM_PTR [ dest + 2 * 8 ], XMM4
-			      C 				MOVDQA			XM_PTR [ dest + 4 * 8 ], XMM4
-			      C 				MOVDQA			XM_PTR [ dest + 6 * 8 ], XMM4			
+			      C 				FOR				idx, < 0, 2, 4, 6 >
+			      C 				MOVDQA			XM_PTR [ dest ] [ idx * 8 ], XMM4
+			      C 				ENDM		
 			      C 	ELSE
 			      C 				XOR				RAX, RAX
-			      C 				MOV				[ dest + 0 * 8 ], RAX
-			      C 				MOV				[ dest + 1 * 8 ], RAX
-			      C 				MOV				[ dest + 2 * 8 ], RAX
-			      C 				MOV				[ dest + 3 * 8 ], RAX
-			      C 				MOV				[ dest + 4 * 8 ], RAX
-			      C 				MOV				[ dest + 5 * 8 ], RAX
-			      C 				MOV				[ dest + 6 * 8 ], RAX
-			      C 				MOV				[ dest + 7 * 8 ], RAX
+			      C 				FOR				idx,  < 0, 1, 2, 3, 4, 5, 6, 7 >
+			      C 				MOV				Q_PTR [ dest ] [ idx * 8 ], RAX
+			      C 				ENDM
 			      C 	ENDIF
 			      C 				ENDM
 			      C 
+			      C ;
+			      C ;			Zero a 512 bit destination, always use Q_PTR, avoids clock penalty from using SIMD
+			      C ;
+			      C Zero512Q		MACRO			dest:REQ
+			      C 				XOR				RAX, RAX
+			      C 				FOR				idx,  < 0, 1, 2, 3, 4, 5, 6, 7 >
+			      C 				MOV				Q_PTR [ dest ] [ idx * 8 ], RAX
+			      C 				ENDM
 			      C 
+			      C 				ENDM
 			      C ;
 			      C ;			Copy a 512 bit source to destination, conditional assembly based on configuration parameters
 			      C ;
-			      C Copy512			MACRO			dest, src
+			      C Copy512			MACRO			src:REQ, dest:REQ
+			      C 	IF		__UseZ 
 			      C 				CheckAlign		dest
 			      C 				CheckAlign		src
-			      C 	IF	__UseZ
 			      C 				VMOVDQA64		ZMM31, ZM_PTR [ src ]
 			      C 				VMOVDQA64		ZM_PTR [ dest ], ZMM31
 			      C 	ELSEIF	__UseY
+			      C 				CheckAlign		dest
+			      C 				CheckAlign		src
 			      C 				VMOVDQA64		YMM4, YM_PTR [ src + 0 * 8 ]
-			      C 				VMOVDQA64		YM_PTR [ dest + 0 * 8 ], YMM4	; alternate ymm regs in case pipeline can execute next without waiting for this.
-			      C 				VMOVDQA64		YMM5, YM_PTR [ src + 4 * 8 ]
-			      C 				VMOVDQA64		YM_PTR [ dest + 4 * 8 ], YMM5
+			      C 				VMOVDQA64		YM_PTR [ dest ] [ 0 * 8 ], YMM4	; alternate ymm regs in case pipeline can execute next without waiting for this.
+			      C 				VMOVDQA64		YMM5, YM_PTR [ src ] [ 4 * 8 ]
+			      C 				VMOVDQA64		YM_PTR [ dest ] [ 4 * 8 ], YMM5
 			      C 	ELSEIF	__UseX
-			      C 				MOVDQA			XMM4, XM_PTR [ src + 0 * 8 ]
-			      C 				MOVDQA			XM_PTR [ dest + 0 * 8 ], XMM4
-			      C 				MOVDQA			XMM3, XM_PTR [ src + 2 * 8 ]
-			      C 				MOVDQA			XM_PTR [ dest + 2 * 8 ], XMM3
-			      C 				MOVDQA			XMM4, XM_PTR [ src + 4 * 8 ]
-			      C 				MOVDQA			XM_PTR [ dest + 4 * 8 ], XMM4
-			      C 				MOVDQA			XMM3, XM_PTR [ src + 6 * 8 ]
-			      C 				MOVDQA			XM_PTR [ dest + 6 * 8 ], XMM3
+			      C 				CheckAlign		dest
+			      C 				CheckAlign		src
+			      C 				MOVDQA			XMM4, XM_PTR [ src ] [ 0 * 8 ]
+			      C 				MOVDQA			XM_PTR [ dest ] [ 0 * 8 ], XMM4
+			      C 				MOVDQA			XMM3, XM_PTR [ src ] [ 2 * 8 ]
+			      C 				MOVDQA			XM_PTR [ dest ] [ 2 * 8 ], XMM3
+			      C 				MOVDQA			XMM4, XM_PTR [ src ] [ 4 * 8 ]
+			      C 				MOVDQA			XM_PTR [ dest ] [ 4 * 8 ], XMM4
+			      C 				MOVDQA			XMM3, XM_PTR [ src ] [ 6 * 8 ]
+			      C 				MOVDQA			XM_PTR [ dest ] [ 6 * 8 ], XMM3
 			      C 	ELSE
-			      C 				MOV				RAX, [ src + 0 * 8 ]
-			      C 				MOV				[ dest + 0 * 8 ], RAX
-			      C 				MOV				RAX, [ src + 1 * 8 ]
-			      C 				MOV				[ dest + 1 * 8 ], RAX
-			      C 				MOV				RAX, [ src + 2 * 8 ]
-			      C 				MOV				[ dest + 2 * 8 ], RAX
-			      C 				MOV				RAX, [ src + 3 * 8 ]
-			      C 				MOV				[ dest + 3 * 8 ], RAX
-			      C 				MOV				RAX, [ src + 4 * 8 ]
-			      C 				MOV				[ dest + 4 * 8 ], RAX
-			      C 				MOV				RAX, [ src + 5 * 8 ]
-			      C 				MOV				[ dest + 5 * 8 ], RAX
-			      C 				MOV				RAX, [ src + 6 * 8 ]
-			      C 				MOV				[ dest + 6 * 8 ], RAX
-			      C 				MOV				RAX, [ src + 7 * 8 ]
-			      C 				MOV				[ dest + 7 * 8 ], RAX
+			      C 				FOR				idx, < 0, 1, 2, 3, 4, 5, 6, 7 >
+			      C 				MOV				RAX, Q_PTR [ src ] [ idx * 8 ]
+			      C 				MOV				Q_PTR [ dest ] [ idx * 8 ], RAX
+			      C 				ENDM
 			      C 	ENDIF
+			      C 				ENDM
+			      C ;
+			      C ;			Copy a 512 bit source to destination, always use Q_PTR, avoids clock penalty from using SIMD
+			      C ;
+			      C Copy512Q		MACRO			src:REQ, dest:REQ
+			      C 				FOR				idx, < 0, 1, 2, 3, 4, 5, 6, 7 >
+			      C 				MOV				RAX, Q_PTR [ src ] [ idx * 8 ]
+			      C 				MOV				Q_PTR [ dest ] [ idx * 8 ], RAX
+			      C 				ENDM
+			      C 
 			      C 				ENDM
 			      C 
 			      C ;
@@ -322,19 +334,21 @@ ui512a.asm						     Page 1 - 1
 								OPTION			EPILOGUE:none
 
 								MemConstants
- 00000000 00000000	     1	ret0			DD				0								
- 00000004 00000001	     1	ret1			DD				1
- 00000008 FFFFFFFF	     1	ret_1			DD				-1
- 0000000C FF		     1	mskAll8			DB				255
- 0000000D 01		     1	mskB0			DB				1
- 0000000E 02		     1	mskB1			DB				2
- 0000000F 04		     1	mskB2			DB				4
- 00000010 08		     1	mskB3			DB				8
- 00000011 10		     1	mskB4			DB				16
- 00000012 20		     1	mskB5			DB				32
- 00000013 40		     1	mskB6			DB				64
- 00000014 80		     1	mskB7			DB				128
- 00000015 00000100	     1	mskHex100		DD				0100h
+ 00000000		     1	zeroQ			DQ				0
+	   0000000000000000
+ 00000008 00000100	     1	mskHex100		DD				0100h
+ 0000000C 00000000	     1	ret0			DD				0								
+ 00000010 00000001	     1	ret1			DD				1
+ 00000014 FFFFFFFF	     1	ret_1			DD				-1
+ 00000018 FF		     1	mskAll8			DB				255
+ 00000019 01		     1	mskB0			DB				1
+ 0000001A 02		     1	mskB1			DB				2
+ 0000001B 04		     1	mskB2			DB				4
+ 0000001C 08		     1	mskB3			DB				8
+ 0000001D 10		     1	mskB4			DB				16
+ 0000001E 20		     1	mskB5			DB				32
+ 0000001F 40		     1	mskB6			DB				64
+ 00000020 80		     1	mskB7			DB				128
 
 				;
 				;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -343,14 +357,14 @@ ui512a.asm						     Page 1 - 1
 				;			destarr		-	Address of destination 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
 				;			returns		-	nothing
 				;
- 00000019			zero_u			PROC			PUBLIC
+ 00000028			zero_u			PROC			PUBLIC
 								Zero512			RCX									; Zero 512 bit space addressed in RCX (the parameter)
- 00000019  62 01 85 40/ EF   1					VPXORQ			ZMM31, ZMM31, ZMM31
+ 00000028  62 01 85 40/ EF   1					VPXORQ			ZMM31, ZMM31, ZMM31
 	   FF
- 0000001F  62 61 FD 48/ 7F   1					VMOVDQA64		ZM_PTR [ RCX ], ZMM31
+ 0000002E  62 61 FD 48/ 7F   1					VMOVDQA64		ZM_PTR [ RCX ], ZMM31
 	   39
- 00000025  C3							RET		
- 00000026			zero_u			ENDP 
+ 00000034  C3							RET		
+ 00000035			zero_u			ENDP 
 
 				;
 				;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -360,14 +374,14 @@ ui512a.asm						     Page 1 - 1
 				;			srcarr		-	Address of source 64 byte aligned array of 8 64-bit QWORDS (512 bits) in RDX
 				;			returns		-	nothing
 				;
- 00000026			copy_u			PROC			PUBLIC
+ 00000035			copy_u			PROC			PUBLIC
 								Copy512			RCX, RDX							; Copy 512 bit space from scr array (address in RDX) to dest (RCX)
- 00000026  62 61 FD 48/ 6F   1					VMOVDQA64		ZMM31, ZM_PTR [ RDX ]
-	   3A
- 0000002C  62 61 FD 48/ 7F   1					VMOVDQA64		ZM_PTR [ RCX ], ZMM31
+ 00000035  62 61 FD 48/ 6F   1					VMOVDQA64		ZMM31, ZM_PTR [ RCX ]
 	   39
- 00000032  C3							RET	
- 00000033			copy_u			ENDP
+ 0000003B  62 61 FD 48/ 7F   1					VMOVDQA64		ZM_PTR [ RDX ], ZMM31
+	   3A
+ 00000041  C3							RET	
+ 00000042			copy_u			ENDP
 
 				;
 				;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -377,15 +391,15 @@ ui512a.asm						     Page 1 - 1
 				;			src			-	u64 value in RDX
 				;			returns		-	nothing
 				;
- 00000033			set_uT64		PROC			PUBLIC
+ 00000042			set_uT64		PROC			PUBLIC
 								Zero512			RCX	
- 00000033  62 01 85 40/ EF   1					VPXORQ			ZMM31, ZMM31, ZMM31
+ 00000042  62 01 85 40/ EF   1					VPXORQ			ZMM31, ZMM31, ZMM31
 	   FF
- 00000039  62 61 FD 48/ 7F   1					VMOVDQA64		ZM_PTR [ RCX ], ZMM31
+ 00000048  62 61 FD 48/ 7F   1					VMOVDQA64		ZM_PTR [ RCX ], ZMM31
 	   39
- 0000003F  48/ 89 51 38						MOV				Q_PTR [ RCX + 7 * 8 ], RDX
- 00000043  C3							RET	
- 00000044			set_uT64		ENDP
+ 0000004E  48/ 89 51 38						MOV				Q_PTR [ RCX ] [ 7 * 8 ], RDX
+ 00000052  C3							RET	
+ 00000053			set_uT64		ENDP
 
 				;
 				;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -393,43 +407,43 @@ ui512a.asm						     Page 1 - 1
 				;			Prototype:		extern "C" s32 compare_u( u64* lh_op, u64* rh_op )
 				;			lh_op		-	Address of LH 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
 				;			rh_op		-	Address of RH 64 byte aligned array of 8 64-bit QWORDS (512 bits) in RDX
-				;			returns		-	(0) for equal, -1 for less than, 1 for greater than
+				;			returns		-	(0) for equal, -1 for lh_op is less than rh_op, 1 for lh_op is greater than rh_op 
 				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 				;
- 00000044			compare_u		PROC			PUBLIC
+ 00000053			compare_u		PROC			PUBLIC
 
 								CheckAlign		RCX
 								CheckAlign		RDX
 
 					IF __UseZ
- 00000044  62 61 FD 48/ 6F					VMOVDQA64		ZMM30, ZM_PTR [ RCX ]				; Load parameters
+ 00000053  62 61 FD 48/ 6F					VMOVDQA64		ZMM30, ZM_PTR [ RCX ]				; Load parameters
 	   31
- 0000004A  62 61 FD 48/ 6F					VMOVDQA64		ZMM31, ZM_PTR [ RDX ]
+ 00000059  62 61 FD 48/ 6F					VMOVDQA64		ZMM31, ZM_PTR [ RDX ]
 	   3A
- 00000050  62 93 8D 40/ 1E					VPCMPUQ			K1, ZMM30, ZMM31, CPLT				; in-lane compare 8 words for 'less than'
+ 0000005F  62 93 8D 40/ 1E					VPCMPUQ			K1, ZMM30, ZMM31, CPLT				; in-lane compare 8 words for 'less than'
 	   CF 01
- 00000057  C5 78/ 93 C1						KMOVW			R8D, K1
- 0000005B  41/ 81 C8						OR				R8D, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
+ 00000066  C5 78/ 93 C1						KMOVW			R8D, K1
+ 0000006A  41/ 81 C8						OR				R8D, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
 	   00000100
- 00000062  41/ D1 E0						SHL				R8D, 1								; shift to get bits 2 through 8
- 00000065  45/ 0F BC C0						BSF				R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
- 00000069  62 93 8D 40/ 1E					VPCMPUQ			K2, ZMM30, ZMM31, CPGT				; do the same for 'greater than'
+ 00000071  41/ D1 E0						SHL				R8D, 1								; shift to get bits 2 through 8
+ 00000074  45/ 0F BC C0						BSF				R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
+ 00000078  62 93 8D 40/ 1E					VPCMPUQ			K2, ZMM30, ZMM31, CPGT				; do the same for 'greater than'
 	   D7 06
- 00000070  C5 F8/ 93 C2						KMOVW			EAX, K2
- 00000074  0D 00000100						OR				EAX, MASK kMask.b8					; OR in a high bit to make an equal compare not zero				
- 00000079  D1 E0						SHL				EAX, 1
- 0000007B  0F BC C0						BSF				EAX, EAX
- 0000007E  44/ 3B C0						CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
- 00000081  8B 05 00000000 R					MOV				EAX, ret0
- 00000087  0F 4F 05						CMOVG			EAX, ret1
-	   00000004 R
- 0000008E  0F 4C 05						CMOVL			EAX, ret_1
-	   00000008 R
- 00000095  C3							RET
+ 0000007F  C5 F8/ 93 C2						KMOVW			EAX, K2
+ 00000083  0D 00000100						OR				EAX, MASK kMask.b8					; OR in a high bit to make an equal compare not zero				
+ 00000088  D1 E0						SHL				EAX, 1
+ 0000008A  0F BC C0						BSF				EAX, EAX
+ 0000008D  44/ 3B C0						CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
+ 00000090  8B 05 0000000C R					MOV				EAX, ret0
+ 00000096  0F 47 05						CMOVA			EAX, ret1
+	   00000010 R
+ 0000009D  0F 42 05						CMOVB			EAX, ret_1
+	   00000014 R
+ 000000A4  C3							RET
 
 					ELSEIF	__UseY
 					ENDIF
- 00000096			compare_u		ENDP 
+ 000000A5			compare_u		ENDP 
 
 				;
 				;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -440,42 +454,42 @@ ui512a.asm						     Page 1 - 1
 				;			returns		-	(0) for equal, -1 for less than, 1 for greater than
 				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 				;
- 00000096			compare_uT64	PROC			PUBLIC
+ 000000A5			compare_uT64	PROC			PUBLIC
 								
 								CheckAlign		RCX
 
 					IF		__UseZ
- 00000096  62 61 FD 48/ 6F					VMOVDQA64		ZMM30, ZM_PTR [ RCX ]				; Load lh-op parameter
+ 000000A5  62 61 FD 48/ 6F					VMOVDQA64		ZMM30, ZM_PTR [ RCX ]				; Load lh-op parameter
 	   31
- 0000009C  48/ 8D 04 25						LEA				RAX, MaskBit7
+ 000000AB  48/ 8D 04 25						LEA				RAX, MaskBit7
 	   00000080
- 000000A4  C5 F9/ 92 C8						KMOVB			K1, RAX
- 000000A8  62 62 FD C9/ 7C					VPBROADCASTQ 	ZMM31 {k1}{z}, RDX					; load rh_op parameter (both now in Z regs)
+ 000000B3  C5 F9/ 92 C8						KMOVB			K1, RAX
+ 000000B7  62 62 FD C9/ 7C					VPBROADCASTQ 	ZMM31 {k1}{z}, RDX					; load rh_op parameter (both now in Z regs)
 	   FA
- 000000AE  62 93 8D 40/ 1E					VPCMPUQ			K1, ZMM30, ZMM31, CPLT				; in-lane compare for LT
+ 000000BD  62 93 8D 40/ 1E					VPCMPUQ			K1, ZMM30, ZMM31, CPLT				; in-lane compare for LT
 	   CF 01
- 000000B5  C5 78/ 93 C1						KMOVW			R8D, K1
- 000000B9  41/ 81 C8						OR				R8D, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
+ 000000C4  C5 78/ 93 C1						KMOVW			R8D, K1
+ 000000C8  41/ 81 C8						OR				R8D, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
 	   00000100
- 000000C0  41/ D1 E0						SHL				R8D, 1								; shift to get bits 2 through 8
- 000000C3  45/ 0F BC C0						BSF				R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
- 000000C7  62 93 8D 40/ 1E					VPCMPUQ			K2, ZMM30, ZMM31, CPGT				; do the same for 'greater than'
+ 000000CF  41/ D1 E0						SHL				R8D, 1								; shift to get bits 2 through 8
+ 000000D2  45/ 0F BC C0						BSF				R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
+ 000000D6  62 93 8D 40/ 1E					VPCMPUQ			K2, ZMM30, ZMM31, CPGT				; do the same for 'greater than'
 	   D7 06
- 000000CE  C5 F8/ 93 C2						KMOVW			EAX, K2
- 000000D2  0D 00000100						OR				EAX, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
- 000000D7  D1 E0						SHL				EAX, 1
- 000000D9  0F BC C0						BSF				EAX, EAX
- 000000DC  44/ 3B C0						CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
- 000000DF  8B 05 00000000 R					MOV				EAX, ret0
- 000000E5  0F 4F 05						CMOVG			EAX, ret1
-	   00000004 R
- 000000EC  0F 4C 05						CMOVL			EAX, ret_1
-	   00000008 R
- 000000F3  C3							RET
+ 000000DD  C5 F8/ 93 C2						KMOVW			EAX, K2
+ 000000E1  0D 00000100						OR				EAX, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
+ 000000E6  D1 E0						SHL				EAX, 1
+ 000000E8  0F BC C0						BSF				EAX, EAX
+ 000000EB  44/ 3B C0						CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
+ 000000EE  8B 05 0000000C R					MOV				EAX, ret0
+ 000000F4  0F 47 05						CMOVA			EAX, ret1
+	   00000010 R
+ 000000FB  0F 42 05						CMOVB			EAX, ret_1
+	   00000014 R
+ 00000102  C3							RET
 
 					ELSE
 					ENDIF
- 000000F4			compare_uT64 ENDP
+ 00000103			compare_uT64 ENDP
 
 				;
 				;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -487,7 +501,7 @@ ui512a.asm						     Page 1 - 1
 				;			returns		-	zero for no carry, 1 for carry (overflow)
 				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 				;
- 000000F4			add_u			PROC			PUBLIC 
+ 00000103			add_u			PROC			PUBLIC 
 
 								CheckAlign		RCX
 								CheckAlign		RDX
@@ -506,52 +520,52 @@ ui512a.asm						     Page 1 - 1
 				;		Worst case: 0xFFF...FFF + 1: an eight word cascading carry all the way to overflow: loops seven times - 82 instruction
 				;
 				; Load operands				
- 000000F4  62 61 FD 48/ 6F					VMOVDQA64		ZMM30, ZM_PTR [RDX]					; ZMM30 = addend1 (8 QWORDs)
+ 00000103  62 61 FD 48/ 6F					VMOVDQA64		ZMM30, ZM_PTR [RDX]					; ZMM30 = addend1 (8 QWORDs)
 	   32
- 000000FA  62 41 FD 48/ 6F					VMOVDQA64		ZMM31, ZM_PTR [R8]					; ZMM31 = addend2 (8 QWORDs)
+ 00000109  62 41 FD 48/ 6F					VMOVDQA64		ZMM31, ZM_PTR [R8]					; ZMM31 = addend2 (8 QWORDs)
 	   38
 
 				; Set up loop variables: R9 to be broadcast for adding carries (a one), RAX for tracking all the carries
- 00000100  4D/ 33 C9						XOR				R9, R9
- 00000103  49/ FF C1						INC				R9
- 00000106  48/ 33 C0						XOR				RAX, RAX							; Carry flag and return code, persistant through iterations
+ 0000010F  4D/ 33 C9						XOR				R9, R9
+ 00000112  49/ FF C1						INC				R9
+ 00000115  48/ 33 C0						XOR				RAX, RAX							; Carry flag and return code, persistant through iterations
 
 				; Initial addition
- 00000109  62 01 8D 40/ D4					VPADDQ		    ZMM29, ZMM30, ZMM31					; ZMM29 = addend1 + addend2 (lane-by-lane)
+ 00000118  62 01 8D 40/ D4					VPADDQ		    ZMM29, ZMM30, ZMM31					; ZMM29 = addend1 + addend2 (lane-by-lane)
 	   EF
 
 				; Compute carries from (first) in-lane addition
- 0000010F  62 93 95 40/ 1E					VPCMPUQ		    K1, ZMM29, ZMM30, CPLT				; k1[i] = 1 if sum[i] < addend1[i] (carry out of lane i)
+ 0000011E  62 93 95 40/ 1E					VPCMPUQ		    K1, ZMM29, ZMM30, CPLT				; k1[i] = 1 if sum[i] < addend1[i] (carry out of lane i)
 	   CE 01
 
 				; Examine computed carries: Most sig bit? indicates overall carry overflow; shift to align, if then none? we are done; 
- 00000116			@@checkcarry:
- 00000116  C5 79/ 93 C1						KMOVB			R8, K1								; Mask bits results (from compare above) in k1 to R8 
- 0000011A  C4 42 F8/ F2 C0					ANDN			R8, RAX, R8							; Ignore carries already added in. Do THESE carries, AND NOT carries already done
- 0000011F  49/ 0B C0						OR				RAX, R8								; Keep these carries, along with the prior carries
- 00000122  49/ D1 E8						SHR				R8, 1								; Shift right: carry-in for each lane (from lane i+1 to i)	
- 00000125  74 1A						JZ				@@saveexit							; if, after alignment shift, there are no carries: save and exit
+ 00000125			@@checkcarry:
+ 00000125  C5 79/ 93 C1						KMOVB			R8, K1								; Mask bits results (from compare above) in k1 to R8 
+ 00000129  C4 42 F8/ F2 C0					ANDN			R8, RAX, R8							; Ignore carries already added in. Do THESE carries, AND NOT carries already done
+ 0000012E  49/ 0B C0						OR				RAX, R8								; Keep these carries, along with the prior carries
+ 00000131  49/ D1 E8						SHR				R8, 1								; Shift right: carry-in for each lane (from lane i+1 to i)	
+ 00000134  74 1A						JZ				@@saveexit							; if, after alignment shift, there are no carries: save and exit
 
 				; anything else, and for as long as these additions cause carries, add one to each carried into SIMD lane
- 00000127  C4 C1 79/ 92 C8					KMOVB			K1, R8
- 0000012C  62 42 FD C9/ 7C					VPBROADCASTQ	ZMM28 { k1 } { z }, R9				; ZMM28 = carry-ins broadcast to selected lanes, zero non-selected lanes
+ 00000136  C4 C1 79/ 92 C8					KMOVB			K1, R8
+ 0000013B  62 42 FD C9/ 7C					VPBROADCASTQ	ZMM28 { k1 } { z }, R9				; ZMM28 = carry-ins broadcast to selected lanes, zero non-selected lanes
 	   E1
- 00000132  62 01 95 41/ D4					VPADDQ			ZMM29 { k1 }, ZMM29, ZMM28			; Add carry-ins to selected lanes
+ 00000141  62 01 95 41/ D4					VPADDQ			ZMM29 { k1 }, ZMM29, ZMM28			; Add carry-ins to selected lanes
 	   EC
- 00000138  62 93 95 41/ 1E					VPCMPUQ			K1 { k1 }, ZMM29, ZMM28, CPLT		; k2[i] = 1 if new sum[i] < carry-in[i] (new carries) Compute any new carries
+ 00000147  62 93 95 41/ 1E					VPCMPUQ			K1 { k1 }, ZMM29, ZMM28, CPLT		; k2[i] = 1 if new sum[i] < carry-in[i] (new carries) Compute any new carries
 	   CC 01
- 0000013F  EB D5						JMP				@@checkcarry
+ 0000014E  EB D5						JMP				@@checkcarry
 
 				; store final sum
- 00000141			@@saveexit:
- 00000141  48/ 83 E0 01						AND				RAX, 1								; Bit 1 signifies a carry out of most significant word (an overflow) -> return code
- 00000145  62 61 FD 48/ 7F					VMOVDQA64		ZM_PTR [RCX], ZMM29					; Store final sum
+ 00000150			@@saveexit:
+ 00000150  48/ 83 E0 01						AND				RAX, 1								; Bit 1 signifies a carry out of most significant word (an overflow) -> return code
+ 00000154  62 61 FD 48/ 7F					VMOVDQA64		ZM_PTR [RCX], ZMM29					; Store final sum
 	   29
- 0000014B  C3							RET													; EAX carries return code (from carry computation above)
+ 0000015A  C3							RET													; EAX carries return code (from carry computation above)
 
 					ELSE
 					ENDIF
- 0000014C			add_u			ENDP
+ 0000015B			add_u			ENDP
 
 				;
 				;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -563,61 +577,61 @@ ui512a.asm						     Page 1 - 1
 				;			returns		-	zero for no carry, 1 for carry (overflow)
 				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 				;
- 0000014C			add_uT64		PROC			PUBLIC 
+ 0000015B			add_uT64		PROC			PUBLIC 
 
 								CheckAlign		RCX
 								CheckAlign		RDX
 
 					IF __UseZ
 				; Load operands				
- 0000014C  62 61 FD 48/ 6F					VMOVDQA64		ZMM30, ZM_PTR [RDX]					; ZMM30 = addend1 (8 QWORDs)
+ 0000015B  62 61 FD 48/ 6F					VMOVDQA64		ZMM30, ZM_PTR [RDX]					; ZMM30 = addend1 (8 QWORDs)
 	   32
- 00000152  C5 F9/ 90 0D						KMOVB			K1, mskB7							; mask for least significant word
-	   00000014 R
- 0000015A  62 42 FD C9/ 7C					VPBROADCASTQ	ZMM31 { k1 } { z }, R8				; ZMM31 now 512 bit version of passed addend2
+ 00000161  C5 F9/ 90 0D						KMOVB			K1, mskB7							; mask for least significant word
+	   00000020 R
+ 00000169  62 42 FD C9/ 7C					VPBROADCASTQ	ZMM31 { k1 } { z }, R8				; ZMM31 now 512 bit version of passed addend2
 	   F8
 
 				; Set up loop variables: R9 to be broadcast for adding carries, RAX for tracking all the carries
- 00000160  4D/ 33 C9						XOR				R9, R9
- 00000163  49/ FF C1						INC				R9
- 00000166  48/ 33 C0						XOR				RAX, RAX							; Carry flag and return code, persistant through iterations
+ 0000016F  4D/ 33 C9						XOR				R9, R9
+ 00000172  49/ FF C1						INC				R9
+ 00000175  48/ 33 C0						XOR				RAX, RAX							; Carry flag and return code, persistant through iterations
 
 				; Initial addition
- 00000169  62 01 8D 40/ D4					VPADDQ		    ZMM29, ZMM30, ZMM31					; ZMM29 = addend1 + addend2 (lane-wise)
+ 00000178  62 01 8D 40/ D4					VPADDQ		    ZMM29, ZMM30, ZMM31					; ZMM29 = addend1 + addend2 (lane-wise)
 	   EF
 
 				; Compute carries from (first) in-lane addition
- 0000016F  62 93 95 40/ 1E					VPCMPUQ		    K1, ZMM29, ZMM30, CPLT				; k1[i] = 1 if sum[i] < addend1[i] (carry out of lane i)
+ 0000017E  62 93 95 40/ 1E					VPCMPUQ		    K1, ZMM29, ZMM30, CPLT				; k1[i] = 1 if sum[i] < addend1[i] (carry out of lane i)
 	   CE 01
 
 				; Examine computed carries: MSB? indicates overall carry overflow; shift to align, if then none? we are done; 
- 00000176			@@checkcarry:
- 00000176  C5 79/ 93 C1						KMOVB			R8, K1								; Mask bits results (from compare above) in k1 to R8
- 0000017A  C4 42 F8/ F2 C0					ANDN			R8, RAX, R8							; Ignore carries already added in. Do these carries, AND NOT carries already done
- 0000017F  49/ 0B C0						OR				RAX, R8								; Keep these carries, along with the prior carries
- 00000182  49/ D1 E8						SHR				R8, 1								; Shift right: carry-in for each lane (from lane i+1 to i)	
- 00000185  74 1A						JZ				@@saveexit							; If, after alignment shift, there are no carries, save and exit
+ 00000185			@@checkcarry:
+ 00000185  C5 79/ 93 C1						KMOVB			R8, K1								; Mask bits results (from compare above) in k1 to R8
+ 00000189  C4 42 F8/ F2 C0					ANDN			R8, RAX, R8							; Ignore carries already added in. Do these carries, AND NOT carries already done
+ 0000018E  49/ 0B C0						OR				RAX, R8								; Keep these carries, along with the prior carries
+ 00000191  49/ D1 E8						SHR				R8, 1								; Shift right: carry-in for each lane (from lane i+1 to i)	
+ 00000194  74 1A						JZ				@@saveexit							; If, after alignment shift, there are no carries, save and exit
 
 				; anything else, and for as long as these additions cause carries, add one to each carried into SIMD lane
- 00000187  C4 C1 79/ 92 C8					KMOVB			K1, R8
- 0000018C  62 42 FD C9/ 7C					VPBROADCASTQ	ZMM28 { k1 } { z }, R9				; ZMM28 = carry-ins broadcast to selected lanes, zero non-selected lanes
+ 00000196  C4 C1 79/ 92 C8					KMOVB			K1, R8
+ 0000019B  62 42 FD C9/ 7C					VPBROADCASTQ	ZMM28 { k1 } { z }, R9				; ZMM28 = carry-ins broadcast to selected lanes, zero non-selected lanes
 	   E1
- 00000192  62 01 95 41/ D4					VPADDQ			ZMM29 { k1 }, ZMM29, ZMM28			; Add carry-ins to selected lanes
+ 000001A1  62 01 95 41/ D4					VPADDQ			ZMM29 { k1 }, ZMM29, ZMM28			; Add carry-ins to selected lanes
 	   EC
- 00000198  62 93 95 41/ 1E					VPCMPUQ			K1 { k1 }, ZMM29, ZMM28, CPLT		; k2[i] = 1 if new sum[i] < carry-in[i] (new carries) Compute any new carries
+ 000001A7  62 93 95 41/ 1E					VPCMPUQ			K1 { k1 }, ZMM29, ZMM28, CPLT		; k2[i] = 1 if new sum[i] < carry-in[i] (new carries) Compute any new carries
 	   CC 01
- 0000019F  EB D5						JMP				@@checkcarry
+ 000001AE  EB D5						JMP				@@checkcarry
 
 				; store final sum
- 000001A1			@@saveexit:
- 000001A1  48/ 83 E0 01						AND				RAX, 1								; Bit 1 signifies a carry out of most significant word (an overflow) -> return code
- 000001A5  62 61 FD 48/ 7F					VMOVDQA64		ZM_PTR [RCX], ZMM29					; Store final sum
+ 000001B0			@@saveexit:
+ 000001B0  48/ 83 E0 01						AND				RAX, 1								; Bit 1 signifies a carry out of most significant word (an overflow) -> return code
+ 000001B4  62 61 FD 48/ 7F					VMOVDQA64		ZM_PTR [RCX], ZMM29					; Store final sum
 	   29
- 000001AB  C3							RET													; EAX carries return code (from carry computation above)
+ 000001BA  C3							RET													; EAX carries return code (from carry computation above)
 					ELSE
 					ENDIF
 
- 000001AC			add_uT64		ENDP 
+ 000001BB			add_uT64		ENDP 
 				;
 				;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 				;			sub_u		-	subtract supplied 512bit (8 QWORDS) RH OP from LH OP giving difference in destination
@@ -628,7 +642,7 @@ ui512a.asm						     Page 1 - 1
 				;			returns		-	zero for no borrow, 1 for borrow (underflow)
 				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 				;
- 000001AC			sub_u			PROC			PUBLIC 
+ 000001BB			sub_u			PROC			PUBLIC 
 
 								CheckAlign		RCX
 								CheckAlign		RDX
@@ -637,50 +651,50 @@ ui512a.asm						     Page 1 - 1
 					IF __UseZ
 
 				; Load operands
- 000001AC  62 61 FD 48/ 6F					VMOVDQA64		ZMM30, ZM_PTR [RDX]					; Load lh_op
+ 000001BB  62 61 FD 48/ 6F					VMOVDQA64		ZMM30, ZM_PTR [RDX]					; Load lh_op
 	   32
- 000001B2  62 41 FD 48/ 6F					VMOVDQA64		ZMM31, ZM_PTR [R8]					; Load rh_op
+ 000001C1  62 41 FD 48/ 6F					VMOVDQA64		ZMM31, ZM_PTR [R8]					; Load rh_op
 	   38
 
 				; Initialize loop variables: R9 for the targeted in-lane subract of borrows; RAX for return code overall borrow flag
- 000001B8  4D/ 33 C9						XOR				R9, R9
- 000001BB  49/ FF C1						INC				R9
- 000001BE  48/ 33 C0						XOR				RAX, RAX
+ 000001C7  4D/ 33 C9						XOR				R9, R9
+ 000001CA  49/ FF C1						INC				R9
+ 000001CD  48/ 33 C0						XOR				RAX, RAX
 
 				; Initial subraction
- 000001C1  62 01 8D 40/ FB					VPSUBQ		    ZMM29, ZMM30, ZMM31					; Initial subtraction
+ 000001D0  62 01 8D 40/ FB					VPSUBQ		    ZMM29, ZMM30, ZMM31					; Initial subtraction
 	   EF
 
 				; Compute initial borrows
- 000001C7  62 93 8D 40/ 1E					VPCMPUQ		    K1, ZMM30, ZMM31, CPLT				; Initial borrows
+ 000001D6  62 93 8D 40/ 1E					VPCMPUQ		    K1, ZMM30, ZMM31, CPLT				; Initial borrows
 	   CF 01
 
 				; Examine computed borrows: 
- 000001CE			@@checkborrow:
- 000001CE  C5 79/ 93 C1						KMOVB			R8, K1								; Mask bits results (from compare above) in k1 to R10 (and R8)
- 000001D2  C4 42 F8/ F2 C0					ANDN			R8, RAX, R8							; Ignore borrows already done. Do these borrows, AND NOT borrows already done
- 000001D7  49/ 0B C0						OR				RAX, R8								; Keep these borrows, along with the prior borrows
- 000001DA  49/ D1 E8						SHR				R8, 1								; Shift right: borrow-from for each lane (from lane i+1 to i)	
- 000001DD  74 1A						JZ				@@saveexit							; If, after alignment shift, there are no borrows, save and exit
+ 000001DD			@@checkborrow:
+ 000001DD  C5 79/ 93 C1						KMOVB			R8, K1								; Mask bits results (from compare above) in k1 to R10 (and R8)
+ 000001E1  C4 42 F8/ F2 C0					ANDN			R8, RAX, R8							; Ignore borrows already done. Do these borrows, AND NOT borrows already done
+ 000001E6  49/ 0B C0						OR				RAX, R8								; Keep these borrows, along with the prior borrows
+ 000001E9  49/ D1 E8						SHR				R8, 1								; Shift right: borrow-from for each lane (from lane i+1 to i)	
+ 000001EC  74 1A						JZ				@@saveexit							; If, after alignment shift, there are no borrows, save and exit
 
 				; anything else, and for as long as these subtractions cause borrows, subtract one from each borrowed from SIMD lane
- 000001DF  C4 C1 79/ 92 C8					KMOVB			K1, R8
- 000001E4  62 42 FD C9/ 7C					VPBROADCASTQ	ZMM28 { k1 }  {z }, R9				; Apply borrow-ins only where needed
+ 000001EE  C4 C1 79/ 92 C8					KMOVB			K1, R8
+ 000001F3  62 42 FD C9/ 7C					VPBROADCASTQ	ZMM28 { k1 }  {z }, R9				; Apply borrow-ins only where needed
 	   E1
- 000001EA  62 01 95 41/ FB					VPSUBQ			ZMM29 { k1 }, ZMM29, ZMM28
+ 000001F9  62 01 95 41/ FB					VPSUBQ			ZMM29 { k1 }, ZMM29, ZMM28
 	   EC
- 000001F0  62 93 95 41/ 1E					VPCMPUQ			k1 { k1 }, ZMM29, ZMM28, CPGT		; compute new mask of borrows
+ 000001FF  62 93 95 41/ 1E					VPCMPUQ			k1 { k1 }, ZMM29, ZMM28, CPGT		; compute new mask of borrows
 	   CC 06
- 000001F7  EB D5						JMP				@@checkborrow
- 000001F9			@@saveexit:
- 000001F9  48/ 83 E0 01						AND				RAX, 1
- 000001FD  62 61 FD 48/ 7F					VMOVDQA64		ZM_PTR [RCX], ZMM29
+ 00000206  EB D5						JMP				@@checkborrow
+ 00000208			@@saveexit:
+ 00000208  48/ 83 E0 01						AND				RAX, 1
+ 0000020C  62 61 FD 48/ 7F					VMOVDQA64		ZM_PTR [RCX], ZMM29
 	   29
- 00000203  C3							RET
+ 00000212  C3							RET
 
 					ELSE
 					ENDIF
- 00000204			sub_u			ENDP 
+ 00000213			sub_u			ENDP 
 
 				;
 				;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -692,7 +706,7 @@ ui512a.asm						     Page 1 - 1
 				;			returns		-	zero for no borrow, 1 for borrow (underflow)
 				;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 				;
- 00000204			sub_uT64		PROC			PUBLIC 
+ 00000213			sub_uT64		PROC			PUBLIC 
 
 								CheckAlign		RCX
 								CheckAlign		RDX
@@ -700,56 +714,56 @@ ui512a.asm						     Page 1 - 1
 					IF __UseZ
 
 				; Load operands
- 00000204  62 61 FD 48/ 6F					VMOVDQA64		ZMM30, ZM_PTR [RDX]			        ; Load lh_op
+ 00000213  62 61 FD 48/ 6F					VMOVDQA64		ZMM30, ZM_PTR [RDX]			        ; Load lh_op
 	   32
- 0000020A  C5 F9/ 90 0D						KMOVB			K1, mskB7							; mask for least significant word
-	   00000014 R
- 00000212  62 42 FD C9/ 7C					VPBROADCASTQ	ZMM31 { k1 } { z }, R8				; ZMM31 now 512 bit version of passed rh_op
+ 00000219  C5 F9/ 90 0D						KMOVB			K1, mskB7							; mask for least significant word
+	   00000020 R
+ 00000221  62 42 FD C9/ 7C					VPBROADCASTQ	ZMM31 { k1 } { z }, R8				; ZMM31 now 512 bit version of passed rh_op
 	   F8
 
 				; Initialize loop variables: R9 for the targeted in-lane subract of borrows; RAX for return code overall borrow flag
- 00000218  4D/ 33 C9						XOR				R9, R9
- 0000021B  49/ FF C1						INC				R9
- 0000021E  48/ 33 C0						XOR				RAX, RAX
+ 00000227  4D/ 33 C9						XOR				R9, R9
+ 0000022A  49/ FF C1						INC				R9
+ 0000022D  48/ 33 C0						XOR				RAX, RAX
 
 				; Initial subraction
- 00000221  62 01 8D 40/ FB					VPSUBQ		    ZMM29, ZMM30, ZMM31					; Initial subtraction
+ 00000230  62 01 8D 40/ FB					VPSUBQ		    ZMM29, ZMM30, ZMM31					; Initial subtraction
 	   EF
 
 				; Compute initial borrows
- 00000227  62 93 8D 40/ 1E					VPCMPUQ		    K1, ZMM30, ZMM31, CPLT				; Initial borrows
+ 00000236  62 93 8D 40/ 1E					VPCMPUQ		    K1, ZMM30, ZMM31, CPLT				; Initial borrows
 	   CF 01
 
 				; Examine computed borrows: 
- 0000022E			@@checkborrow:
- 0000022E  C5 79/ 93 C1						KMOVB			R8, K1								; Mask bits results (from compare above) in k1 to R8
- 00000232  C4 42 F8/ F2 C0					ANDN			R8, RAX, R8							; Ignore borrows already done. Do these borrows, AND NOT borrows already done
- 00000237  49/ 0B C0						OR				RAX, R8								; Keep these borrows, along with the prior borrows
- 0000023A  49/ D1 E8						SHR				R8, 1								; Shift right: borrow-from for each lane (from lane i+1 to i)	
- 0000023D  74 1A						JZ				@@saveexit							; If, after alignment shift, there are no borrows, save and exit
+ 0000023D			@@checkborrow:
+ 0000023D  C5 79/ 93 C1						KMOVB			R8, K1								; Mask bits results (from compare above) in k1 to R8
+ 00000241  C4 42 F8/ F2 C0					ANDN			R8, RAX, R8							; Ignore borrows already done. Do these borrows, AND NOT borrows already done
+ 00000246  49/ 0B C0						OR				RAX, R8								; Keep these borrows, along with the prior borrows
+ 00000249  49/ D1 E8						SHR				R8, 1								; Shift right: borrow-from for each lane (from lane i+1 to i)	
+ 0000024C  74 1A						JZ				@@saveexit							; If, after alignment shift, there are no borrows, save and exit
 
 				; anything else, and for as long as these subtractions cause borrows, subtract one from each borrowed from SIMD lane
- 0000023F  C4 C1 79/ 92 C8					KMOVB			K1, R8
- 00000244  62 42 FD C9/ 7C					VPBROADCASTQ	ZMM28 { k1 }  {z }, R9				; Apply borrow-ins only where needed
+ 0000024E  C4 C1 79/ 92 C8					KMOVB			K1, R8
+ 00000253  62 42 FD C9/ 7C					VPBROADCASTQ	ZMM28 { k1 }  {z }, R9				; Apply borrow-ins only where needed
 	   E1
- 0000024A  62 01 95 41/ FB					VPSUBQ			ZMM29 { k1 }, ZMM29, ZMM28
+ 00000259  62 01 95 41/ FB					VPSUBQ			ZMM29 { k1 }, ZMM29, ZMM28
 	   EC
- 00000250  62 93 95 41/ 1E					VPCMPUQ			k1 { k1 }, ZMM29, ZMM28, CPGT		; compute new mask of borrows
+ 0000025F  62 93 95 41/ 1E					VPCMPUQ			k1 { k1 }, ZMM29, ZMM28, CPGT		; compute new mask of borrows
 	   CC 06
- 00000257  EB D5						JMP				@@checkborrow
- 00000259			@@saveexit:
- 00000259  48/ 83 E0 01						AND				RAX, 1
- 0000025D  62 61 FD 48/ 7F					VMOVDQA64		ZM_PTR [RCX], ZMM29
+ 00000266  EB D5						JMP				@@checkborrow
+ 00000268			@@saveexit:
+ 00000268  48/ 83 E0 01						AND				RAX, 1
+ 0000026C  62 61 FD 48/ 7F					VMOVDQA64		ZM_PTR [RCX], ZMM29
 	   29
- 00000263  C3							RET
+ 00000272  C3							RET
 
 					ELSE
 					ENDIF
 
- 00000264			sub_uT64		ENDP 
+ 00000273			sub_uT64		ENDP 
 
 								END
-Microsoft (R) Macro Assembler (x64) Version 14.43.34809.0   03/15/25 21:30:36
+Microsoft (R) Macro Assembler (x64) Version 14.44.35209.0   06/29/25 21:46:13
 ui512a.asm						     Symbols 2 - 1
 
 
@@ -760,10 +774,12 @@ Macros:
                 N a m e                 Type
 
 CheckAlign . . . . . . . . . . .	Proc
+Copy512Q . . . . . . . . . . . .	Proc
 Copy512  . . . . . . . . . . . .	Proc
 GetZatMask . . . . . . . . . . .	Proc
 MemConstants . . . . . . . . . .	Proc
 SetZatMask . . . . . . . . . . .	Proc
+Zero512Q . . . . . . . . . . . .	Proc
 Zero512  . . . . . . . . . . . .	Proc
 
 
@@ -788,23 +804,23 @@ Procedures, parameters, and locals:
 
                 N a m e                 Type     Value    Attr
 
-add_uT64 . . . . . . . . . . . .	P 	 0000014C _TEXT	Length= 00000060 Public
-  @@checkcarry . . . . . . . . .	L 	 00000176 _TEXT	
-  @@saveexit . . . . . . . . . .	L 	 000001A1 _TEXT	
-add_u  . . . . . . . . . . . . .	P 	 000000F4 _TEXT	Length= 00000058 Public
-  @@checkcarry . . . . . . . . .	L 	 00000116 _TEXT	
-  @@saveexit . . . . . . . . . .	L 	 00000141 _TEXT	
-compare_uT64 . . . . . . . . . .	P 	 00000096 _TEXT	Length= 0000005E Public
-compare_u  . . . . . . . . . . .	P 	 00000044 _TEXT	Length= 00000052 Public
-copy_u . . . . . . . . . . . . .	P 	 00000026 _TEXT	Length= 0000000D Public
-set_uT64 . . . . . . . . . . . .	P 	 00000033 _TEXT	Length= 00000011 Public
-sub_uT64 . . . . . . . . . . . .	P 	 00000204 _TEXT	Length= 00000060 Public
-  @@checkborrow  . . . . . . . .	L 	 0000022E _TEXT	
-  @@saveexit . . . . . . . . . .	L 	 00000259 _TEXT	
-sub_u  . . . . . . . . . . . . .	P 	 000001AC _TEXT	Length= 00000058 Public
-  @@checkborrow  . . . . . . . .	L 	 000001CE _TEXT	
-  @@saveexit . . . . . . . . . .	L 	 000001F9 _TEXT	
-zero_u . . . . . . . . . . . . .	P 	 00000019 _TEXT	Length= 0000000D Public
+add_uT64 . . . . . . . . . . . .	P 	 0000015B _TEXT	Length= 00000060 Public
+  @@checkcarry . . . . . . . . .	L 	 00000185 _TEXT	
+  @@saveexit . . . . . . . . . .	L 	 000001B0 _TEXT	
+add_u  . . . . . . . . . . . . .	P 	 00000103 _TEXT	Length= 00000058 Public
+  @@checkcarry . . . . . . . . .	L 	 00000125 _TEXT	
+  @@saveexit . . . . . . . . . .	L 	 00000150 _TEXT	
+compare_uT64 . . . . . . . . . .	P 	 000000A5 _TEXT	Length= 0000005E Public
+compare_u  . . . . . . . . . . .	P 	 00000053 _TEXT	Length= 00000052 Public
+copy_u . . . . . . . . . . . . .	P 	 00000035 _TEXT	Length= 0000000D Public
+set_uT64 . . . . . . . . . . . .	P 	 00000042 _TEXT	Length= 00000011 Public
+sub_uT64 . . . . . . . . . . . .	P 	 00000213 _TEXT	Length= 00000060 Public
+  @@checkborrow  . . . . . . . .	L 	 0000023D _TEXT	
+  @@saveexit . . . . . . . . . .	L 	 00000268 _TEXT	
+sub_u  . . . . . . . . . . . . .	P 	 000001BB _TEXT	Length= 00000058 Public
+  @@checkborrow  . . . . . . . .	L 	 000001DD _TEXT	
+  @@saveexit . . . . . . . . . .	L 	 00000208 _TEXT	
+zero_u . . . . . . . . . . . . .	P 	 00000028 _TEXT	Length= 0000000D Public
 
 
 Symbols:
@@ -841,20 +857,21 @@ __UseY . . . . . . . . . . . . .	Number	 00000000h
 __UseZ . . . . . . . . . . . . .	Number	 00000001h   
 m32BCST  . . . . . . . . . . . .	Text   	 DWORD BCST
 m64BCST  . . . . . . . . . . . .	Text   	 QWORD BCST
-mskAll8  . . . . . . . . . . . .	Byte	 0000000C _TEXT	
-mskB0  . . . . . . . . . . . . .	Byte	 0000000D _TEXT	
-mskB1  . . . . . . . . . . . . .	Byte	 0000000E _TEXT	
-mskB2  . . . . . . . . . . . . .	Byte	 0000000F _TEXT	
-mskB3  . . . . . . . . . . . . .	Byte	 00000010 _TEXT	
-mskB4  . . . . . . . . . . . . .	Byte	 00000011 _TEXT	
-mskB5  . . . . . . . . . . . . .	Byte	 00000012 _TEXT	
-mskB6  . . . . . . . . . . . . .	Byte	 00000013 _TEXT	
-mskB7  . . . . . . . . . . . . .	Byte	 00000014 _TEXT	
-mskHex100  . . . . . . . . . . .	DWord	 00000015 _TEXT	
-ret0 . . . . . . . . . . . . . .	DWord	 00000000 _TEXT	
-ret1 . . . . . . . . . . . . . .	DWord	 00000004 _TEXT	
-ret_1  . . . . . . . . . . . . .	DWord	 00000008 _TEXT	
+mskAll8  . . . . . . . . . . . .	Byte	 00000018 _TEXT	
+mskB0  . . . . . . . . . . . . .	Byte	 00000019 _TEXT	
+mskB1  . . . . . . . . . . . . .	Byte	 0000001A _TEXT	
+mskB2  . . . . . . . . . . . . .	Byte	 0000001B _TEXT	
+mskB3  . . . . . . . . . . . . .	Byte	 0000001C _TEXT	
+mskB4  . . . . . . . . . . . . .	Byte	 0000001D _TEXT	
+mskB5  . . . . . . . . . . . . .	Byte	 0000001E _TEXT	
+mskB6  . . . . . . . . . . . . .	Byte	 0000001F _TEXT	
+mskB7  . . . . . . . . . . . . .	Byte	 00000020 _TEXT	
+mskHex100  . . . . . . . . . . .	DWord	 00000008 _TEXT	
+ret0 . . . . . . . . . . . . . .	DWord	 0000000C _TEXT	
+ret1 . . . . . . . . . . . . . .	DWord	 00000010 _TEXT	
+ret_1  . . . . . . . . . . . . .	DWord	 00000014 _TEXT	
 ui512aMacros_INC . . . . . . . .	Text   	 1
+zeroQ  . . . . . . . . . . . . .	QWord	 00000000 _TEXT	
 
 	   0 Warnings
 	   0 Errors

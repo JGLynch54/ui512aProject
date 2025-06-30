@@ -140,7 +140,7 @@ namespace ui512aTests
 
 			string runmsg = "Zero function testing. Ran tests " + to_string(runcount) + " times, each with pseudo random values.\n";
 			Logger::WriteMessage(runmsg.c_str());
-			Logger::WriteMessage(L"Passed. Tested expected values via assert.\n\n");
+			Logger::WriteMessage(L"Passed. Tested expected values via assert.\n");
 		};
 
 		TEST_METHOD(ui512a_01_zero_timing)
@@ -192,7 +192,7 @@ namespace ui512aTests
 
 			string runmsg = "Copy function testing. Ran tests " + to_string(runcount) + " times, each with pseudo random values.\n";
 			Logger::WriteMessage(runmsg.c_str());
-			Logger::WriteMessage(L"Passed. Tested expected values via assert.\n\n");
+			Logger::WriteMessage(L"Passed. Tested expected values via assert.\n");
 		};
 
 		TEST_METHOD(ui512a_02_copy_timing)
@@ -248,7 +248,7 @@ namespace ui512aTests
 			};
 			string runmsg = "Set value function testing. Ran tests " + to_string(runcount) + " times, each with pseudo random values.\n";
 			Logger::WriteMessage(runmsg.c_str());
-			Logger::WriteMessage(L"Passed. Tested expected values via assert.\n\n");
+			Logger::WriteMessage(L"Passed. Tested expected values via assert.\n");
 		};
 
 		TEST_METHOD(ui512a_03_set64_timing)
@@ -312,7 +312,7 @@ namespace ui512aTests
 
 			string runmsg = "Compare function testing. Ran tests " + to_string(3 * 8 * runcount) + " times, each with pseudo random values.\n";
 			Logger::WriteMessage(runmsg.c_str());
-			Logger::WriteMessage(L"Passed. Tested expected values via assert\n\n.");
+			Logger::WriteMessage(L"Passed. Tested expected values via assert.\n");
 		};
 
 		TEST_METHOD(ui512a_04_compare_timing)
@@ -372,7 +372,7 @@ namespace ui512aTests
 
 			string runmsg = "Compare (x64) function testing. Ran tests " + to_string(3 * 8 * runcount) + " times, each with pseudo random values.\n";
 			Logger::WriteMessage(runmsg.c_str());
-			Logger::WriteMessage(L"Passed. Tested expected values via assert\n\n.");
+			Logger::WriteMessage(L"Passed. Tested expected values via assert.\n");
 		};
 
 		TEST_METHOD(ui512a_05_compare64_timing)
@@ -427,6 +427,7 @@ namespace ui512aTests
 					num2[j] = ~num1[j];
 					sum[j] = 0;
 				};
+
 				// add test: "random" number plus ones complement should equal 0xfff..., no carries or overflow
 				overflow = add_u(sum, num1, num2);
 				Assert::AreEqual((s16)0, overflow);
@@ -434,6 +435,7 @@ namespace ui512aTests
 				{
 					Assert::AreEqual(0xFFFFFFFFFFFFFFFFull, sum[j]);
 				};
+
 				// now add one, should cascade carries through all eight, making them each zero, and overflow
 				overflow = add_u(sum, sum, one);		// Note:  Destination (sum) is also an operand
 				Assert::AreEqual((s16)1, overflow);
@@ -448,6 +450,7 @@ namespace ui512aTests
 					num1[j] = RandomU64(&seed);
 					num2[j] = ~num1[j];
 				};
+
 				// add test: "random" number plus ones complement should equal 0xfff..., no carries or overflow
 				overflow = add_u(num1, num1, num2);
 				Assert::AreEqual((s16)0, overflow);
@@ -455,6 +458,7 @@ namespace ui512aTests
 				{
 					Assert::AreEqual(0xFFFFFFFFFFFFFFFFull, num1[j]);
 				};
+
 				// now add one, should cascade carries through all eight, making them each zero, and overflow
 				overflow = add_u(num1, num1, one);		// Note:  Destination (sum) is also an operand
 				Assert::AreEqual((s16)1, overflow);
@@ -472,11 +476,13 @@ namespace ui512aTests
 					num2[j] = RandomU64(&seed);
 					sum[j] = 0;
 				};
+
 				u16 nRzeros = RandomU64(&seed) % 4;
 				for (u16 k = 0; k < nRzeros; k++) {
 					s16 kk = RandomU64(&seed) % 7;
 					num1[kk] = 0;
-				}
+				};
+
 				nRzeros = RandomU64(&seed) % 4;
 				for (u16 k = 0; k < nRzeros; k++) {
 					s16 kk = RandomU64(&seed) % 7;
@@ -484,35 +490,27 @@ namespace ui512aTests
 				}
 
 				overflow = add_u(sum, num1, num2);
+				s16 chkovr = compare_u(sum, num1);
 				if (overflow)
 				{
-					if (compare_u(sum, num1) != -1)
+					if (chkovr != -1)
 					{
-						Logger::WriteMessage("Overflow error: false positive");
+						Logger::WriteMessage("Overflow error: false positive\n");
 					};
 				}
+
 				if (!overflow)
 				{
-					if (compare_u(sum, num1) == -1)
+					if (chkovr == -1)
 					{
-						Logger::WriteMessage("Overflow error: false negative");
+						Logger::WriteMessage("Overflow error: false negative\n");
 					};
-				}
-
-				//alignas (64) u64 addsub[8]{ 0, 0, 0, 0, 0, 0, 0, 0 };
-				//s16 overflow2 = 0;
-				//overflow2 = sub_u(addsub, num1, num2);
-				//Assert::AreEqual(overflow, overflow2);
-				//for (int j = 0; j < 8; j++)
-				//{
-				//	Assert::AreEqual(sum[j], addsub[j]);
-				//};
-
+				};
 			};
 
 			string runmsg = "Add function testing. Ran tests " + to_string(runcount * 5) + " times, each with pseudo random values.\n";
 			Logger::WriteMessage(runmsg.c_str());
-			Logger::WriteMessage(L"Passed. Tested expected values via assert\n\n.");
+			Logger::WriteMessage(L"Passed. Tested expected values via assert.\n");
 		};
 
 		TEST_METHOD(ui512a_06_add_timing)
@@ -577,7 +575,7 @@ namespace ui512aTests
 
 			string runmsg = "Add (x64) function testing. Ran tests " + to_string(runcount * 2) + " times, each with pseudo random values.\n";
 			Logger::WriteMessage(runmsg.c_str());
-			Logger::WriteMessage(L"Passed. Tested expected values via assert\n\n.");
+			Logger::WriteMessage(L"Passed. Tested expected values via assert.\n");
 		};
 
 		TEST_METHOD(ui512a_07_add64_timimg)
@@ -630,7 +628,7 @@ namespace ui512aTests
 
 			string runmsg = "Subtract function testing. Ran tests " + to_string(runcount * 2) + " times, each with pseudo random values.\n";
 			Logger::WriteMessage(runmsg.c_str());
-			Logger::WriteMessage(L"Passed. Tested expected values via assert\n\n.");
+			Logger::WriteMessage(L"Passed. Tested expected values via assert.\n");
 		};
 
 		TEST_METHOD(ui512a_08_subtract_timing)
@@ -685,7 +683,7 @@ namespace ui512aTests
 
 			string runmsg = "Subtract (T64) function testing. Ran tests " + to_string(runcount * 2) + " times, each with pseudo random values.\n";
 			Logger::WriteMessage(runmsg.c_str());
-			Logger::WriteMessage(L"Passed. Tested expected values via assert\n\n.");
+			Logger::WriteMessage(L"Passed. Tested expected values via assert.\n");
 		};
 
 		TEST_METHOD(ui512a_09_subtract64_timing)
