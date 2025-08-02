@@ -59,6 +59,11 @@ extern "C"
 	// subtract supplied 64 bit right hand (64 bit value) op from left hand (512 bit) giving difference
 	// returns: zero for no borrow, 1 for borrow (underflow)
 	s16 sub_uT64(u64*, u64*, u64);
+
+	// void reg_verify(uu64 * regstruct);
+	// reg_verify - copy non - volatile regs into callers struct of nine qwords) intended for uit tests to verify non - volatile regs are not changed
+	void reg_verify(u64*);
+
 };
 
 #endif

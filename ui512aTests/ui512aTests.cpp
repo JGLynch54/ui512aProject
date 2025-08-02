@@ -43,7 +43,8 @@ namespace ui512aTests
 	TEST_CLASS(ui512aTests)
 	{
 	public:
-		const s32 runcount = 2500;
+		const s32 runcount = 10000;
+		const s32 regvercount = 5000;
 		const s32 timingcount = 100000000;
 
 		/// <summary>
@@ -52,10 +53,10 @@ namespace ui512aTests
 		/// ref: Knuth, Art Of Computer Programming, Vol. 2, Seminumerical Algorithms, 3rd Ed. Sec 3.2.1
 		/// </summary>
 		/// <param name="seed">if zero, will supply with: 4294967291</param>
-		/// <returns>Pseudo-random number from zero to ~2^63 (9223372036854775807)</returns>
+		/// <returns>Pseudo-random number from zero to ~2^64 (18446744073709551557)</returns>
 		u64 RandomU64(u64* seed)
 		{
-			const u64 m = 9223372036854775807ull;			// 2^63 - 1, a Mersenne prime
+			const u64 m = 18446744073709551557ull;			// greatest prime below 2^64
 			const u64 a = 68719476721ull;					// closest prime below 2^36
 			const u64 c = 268435399ull;						// closest prime below 2^28
 			// suggested seed: around 2^32, 4294967291
@@ -70,7 +71,7 @@ namespace ui512aTests
 			const u32 dec = 10;
 			u32 dist[dec]{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-			const u64 split = 9223372036854775807ull / dec;
+			const u64 split = 18446744073709551557ull / dec;
 			u32 distc = 0;
 			float varsum = 0.0;
 			float deviation = 0.0;
@@ -159,12 +160,34 @@ namespace ui512aTests
 				zero_u(num1);
 			};
 
-			for (int j = 0; j < 8; j++)
+			string runmsg = "Zero function timing. Ran " + to_string(timingcount) + " times.\n";
+			Logger::WriteMessage(runmsg.c_str());
+		};
+
+		TEST_METHOD(ui512a_01_zero_reg)
+		{
+			// Zero function register verification.
+			//	Save registers before call, verify non-volatile registers remain unchanged after call.
+			regs r_before{};
+			regs r_after{};
+			u64 seed = 0;
+			alignas (64) u64 num1[8]{};
+
+			for (int i = 0; i < regvercount; i++)
 			{
-				Assert::AreEqual(0ull, num1[j]);
+				for (int j = 0; j < 8; j++)
+				{
+					num1[j] = RandomU64(&seed);
+				};
+				r_before.Clear();
+				reg_verify((u64*)&r_before);
+				zero_u(num1);
+				r_after.Clear();
+				reg_verify((u64*)&r_after);
+				Assert::IsTrue(r_before.AreEqual(&r_after), L"Register validation failed");
 			};
 
-			string runmsg = "Zero function timing. Ran " + to_string(timingcount) + " times.\n";
+			string runmsg = "Zero function register validation. Ran " + to_string(regvercount) + " times.\n";
 			Logger::WriteMessage(runmsg.c_str());
 		};
 
@@ -213,12 +236,34 @@ namespace ui512aTests
 				copy_u(num2, num1);
 			};
 
-			for (int j = 0; j < 8; j++)
+			string runmsg = "Copy function timing. Ran " + to_string(timingcount) + " times.\n";
+			Logger::WriteMessage(runmsg.c_str());
+		};
+
+		TEST_METHOD(ui512a_02_copy_reg)
+		{
+			// Copy function register verification.
+			//	Check register before call, verify non-volatile register remain unchanged after call.
+			regs r_before{};
+			regs r_after{};
+			u64 seed = 0;
+			alignas (64) u64 num1[8]{};
+			alignas (64) u64 num2[8]{};
+			for (int i = 0; i < regvercount; i++)
 			{
-				Assert::AreEqual(num2[j], num1[j]);
+				for (int j = 0; j < 8; j++)
+				{
+					num1[j] = RandomU64(&seed);
+				};
+				r_before.Clear();
+				reg_verify((u64*)&r_before);
+				copy_u(num1, num2);
+				r_after.Clear();
+				reg_verify((u64*)&r_after);
+				Assert::IsTrue(r_before.AreEqual(&r_after), L"Register validation failed");
 			};
 
-			string runmsg = "Copy function timing. Ran " + to_string(timingcount) + " times.\n";
+			string runmsg = "Copy function register validation. Ran " + to_string(regvercount) + " times.\n";
 			Logger::WriteMessage(runmsg.c_str());
 		};
 
@@ -268,13 +313,34 @@ namespace ui512aTests
 				set_uT64(num1, val);
 			};
 
-			for (int j = 0; j < 7; j++)
-			{
-				Assert::AreEqual((u64)0, num1[j]);
-			}
-
-			Assert::AreEqual(val, num1[7]);
 			string runmsg = "Set value (x64) function timing. Ran " + to_string(timingcount) + " times.\n";
+			Logger::WriteMessage(runmsg.c_str());
+		};
+
+		TEST_METHOD(ui512a_03_set64_reg)
+		{
+			// Set64 function register verification.
+			//	Check register before call, verify non-volatile register remain unchanged after call.
+			regs r_before{};
+			regs r_after{};
+			u64 seed = 0;
+			alignas (64) u64 num1[8]{};
+			for (int i = 0; i < regvercount; i++)
+			{
+				for (int j = 0; j < 8; j++)
+				{
+					num1[j] = RandomU64(&seed);
+				};
+				u64 val = RandomU64(&seed);
+				r_before.Clear();
+				reg_verify((u64*)&r_before);
+				set_uT64(num1, val);
+				r_after.Clear();
+				reg_verify((u64*)&r_after);
+				Assert::IsTrue(r_before.AreEqual(&r_after), L"Register validation failed");
+			};
+
+			string runmsg = "Set64 function register validation. Ran " + to_string(regvercount) + " times.\n";
 			Logger::WriteMessage(runmsg.c_str());
 		};
 
@@ -337,6 +403,36 @@ namespace ui512aTests
 			Logger::WriteMessage(runmsg.c_str());
 		};
 
+
+		TEST_METHOD(ui512a_04_compare_reg)
+		{
+			// Compare function register verification.
+			//	Check register before call, verify non-volatile register remain unchanged after call.
+			regs r_before{};
+			regs r_after{};
+			u64 seed = 0;
+			alignas (64) u64 num1[8]{};
+			alignas (64) u64 num2[8]{};
+			for (int i = 0; i < regvercount; i++)
+			{
+				for (int j = 0; j < 8; j++)
+				{
+					num1[j] = RandomU64(&seed);
+					num1[j] = RandomU64(&seed);
+				};
+				u64 val = RandomU64(&seed);
+				r_before.Clear();
+				reg_verify((u64*)&r_before);
+				s16 result = compare_u(num1, num2);
+				r_after.Clear();
+				reg_verify((u64*)&r_after);
+				Assert::IsTrue(r_before.AreEqual(&r_after), L"Register validation failed");
+			};
+
+			string runmsg = "Compare function register validation. Ran " + to_string(regvercount) + " times.\n";
+			Logger::WriteMessage(runmsg.c_str());
+		};
+
 		TEST_METHOD(ui512a_05_compare64)
 		{
 			u64 seed = 0;
@@ -390,6 +486,34 @@ namespace ui512aTests
 
 			Assert::AreEqual(0, eval);
 			string runmsg = "Compare (T64) function timing. Ran " + to_string(timingcount) + " times.\n";
+			Logger::WriteMessage(runmsg.c_str());
+		};
+
+
+		TEST_METHOD(ui512a_05_compare64_reg)
+		{
+			// Compare64 function register verification.
+			//	Check register before call, verify non-volatile register remain unchanged after call.
+			regs r_before{};
+			regs r_after{};
+			u64 seed = 0;
+			alignas (64) u64 num1[8]{};
+			for (int i = 0; i < regvercount; i++)
+			{
+				for (int j = 0; j < 8; j++)
+				{
+					num1[j] = RandomU64(&seed);
+				};
+				u64 val = RandomU64(&seed);
+				r_before.Clear();
+				reg_verify((u64*)&r_before);
+				s16 result = compare_uT64(num1, val);
+				r_after.Clear();
+				reg_verify((u64*)&r_after);
+				Assert::IsTrue(r_before.AreEqual(&r_after), L"Register validation failed");
+			};
+
+			string runmsg = "Compare64 function register validation. Ran " + to_string(regvercount) + " times.\n";
 			Logger::WriteMessage(runmsg.c_str());
 		};
 
@@ -537,12 +661,43 @@ namespace ui512aTests
 			Logger::WriteMessage(runmsg.c_str());
 		};
 
+
+		TEST_METHOD(ui512a_06_add_reg)
+		{
+			// add_u function register verification.
+			//	Check register before call, verify non-volatile register remain unchanged after call.
+			regs r_before{};
+			regs r_after{};
+			u64 seed = 0;
+			alignas (64) u64 num1[8]{};
+			alignas (64) u64 num2[8]{};
+			alignas (64) u64 num3[8]{};
+			for (int i = 0; i < regvercount; i++)
+			{
+				for (int j = 0; j < 8; j++)
+				{
+					num1[j] = RandomU64(&seed);
+					num2[j] = RandomU64(&seed);
+					num3[j] = RandomU64(&seed);
+				};
+				u64 val = RandomU64(&seed);
+				r_before.Clear();
+				reg_verify((u64*)&r_before);
+				add_u(num1, num2, num3);
+				r_after.Clear();
+				reg_verify((u64*)&r_after);
+				Assert::IsTrue(r_before.AreEqual(&r_after), L"Register validation failed");
+			};
+
+			string runmsg = "add_u function register validation. Ran " + to_string(regvercount) + " times.\n";
+			Logger::WriteMessage(runmsg.c_str());
+		};
+
 		TEST_METHOD(ui512a_07_add64)
 		{
 			alignas (64) u64 num1[8]{ 0, 0, 0, 0, 0, 0, 0, 0 };
 			alignas (64) u64 sum[8]{ 0, 0, 0, 0, 0, 0, 0, 0 };
 			alignas (64) u64 one[8]{ 0, 0, 0, 0, 0, 0, 0, 1 };
-
 
 			u64 seed = 0;
 			u64 num2 = 0;
@@ -591,6 +746,34 @@ namespace ui512aTests
 			};
 
 			string runmsg = "Add (x64) function timing. Ran " + to_string(timingcount) + " times.\n";
+			Logger::WriteMessage(runmsg.c_str());
+		};
+
+
+		TEST_METHOD(ui512a_07_add64_reg)
+		{
+			// Add64 function register verification.
+			//	Check register before call, verify non-volatile register remain unchanged after call.
+			regs r_before{};
+			regs r_after{};
+			u64 seed = 0;
+			alignas (64) u64 num1[8]{};
+			for (int i = 0; i < regvercount; i++)
+			{
+				for (int j = 0; j < 8; j++)
+				{
+					num1[j] = RandomU64(&seed);
+				};
+				u64 val = RandomU64(&seed);
+				r_before.Clear();
+				reg_verify((u64*)&r_before);
+				add_uT64(num1, num1, val);
+				r_after.Clear();
+				reg_verify((u64*)&r_after);
+				Assert::IsTrue(r_before.AreEqual(&r_after), L"Register validation failed");
+			};
+
+			string runmsg = "add_uT64 function register validation. Ran " + to_string(regvercount) + " times.\n";
 			Logger::WriteMessage(runmsg.c_str());
 		};
 
@@ -647,6 +830,38 @@ namespace ui512aTests
 			Logger::WriteMessage(runmsg.c_str());
 		};
 
+
+		TEST_METHOD(ui512a_08_subtract_reg)
+		{
+			// sub_u function register verification.
+			//	Check register before call, verify non-volatile register remain unchanged after call.
+			regs r_before{};
+			regs r_after{};
+			u64 seed = 0;
+			alignas (64) u64 num1[8]{};
+			alignas (64) u64 num2[8]{};
+			alignas (64) u64 num3[8]{};
+			for (int i = 0; i < regvercount; i++)
+			{
+				for (int j = 0; j < 8; j++)
+				{
+					num1[j] = RandomU64(&seed);
+					num2[j] = RandomU64(&seed);
+					num3[j] = RandomU64(&seed);
+				};
+				u64 val = RandomU64(&seed);
+				r_before.Clear();
+				reg_verify((u64*)&r_before);
+				sub_u(num1, num2, num3);
+				r_after.Clear();
+				reg_verify((u64*)&r_after);
+				Assert::IsTrue(r_before.AreEqual(&r_after), L"Register validation failed");
+			};
+
+			string runmsg = "sub_u function register validation. Ran " + to_string(regvercount) + " times.\n";
+			Logger::WriteMessage(runmsg.c_str());
+		};
+
 		TEST_METHOD(ui512a_09_subtract64)
 		{
 			alignas (64) u64 num1[8]{ 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -699,6 +914,34 @@ namespace ui512aTests
 			};
 
 			string runmsg = "Subtract (x64) function timing. Ran " + to_string(timingcount) + " times.\n";
+			Logger::WriteMessage(runmsg.c_str());
+		};
+
+
+		TEST_METHOD(ui512a_09_subtract64_reg)
+		{
+			// subtract64 function register verification.
+			//	Check register before call, verify non-volatile register remain unchanged after call.
+			regs r_before{};
+			regs r_after{};
+			u64 seed = 0;
+			alignas (64) u64 num1[8]{};
+			for (int i = 0; i < regvercount; i++)
+			{
+				for (int j = 0; j < 8; j++)
+				{
+					num1[j] = RandomU64(&seed);
+				};
+				u64 val = RandomU64(&seed);
+				r_before.Clear();
+				reg_verify((u64*)&r_before);
+				sub_uT64(num1, num1, val);
+				r_after.Clear();
+				reg_verify((u64*)&r_after);
+				Assert::IsTrue(r_before.AreEqual(&r_after), L"Register validation failed");
+			};
+
+			string runmsg = "Sub_uT64 function register validation. Ran " + to_string(regvercount) + " times.\n";
 			Logger::WriteMessage(runmsg.c_str());
 		};
 	};

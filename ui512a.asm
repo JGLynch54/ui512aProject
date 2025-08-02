@@ -16,13 +16,13 @@
 ;               ui512md provides multiply and divide.
 ;
 ;				It is written in assembly language, using the MASM (ml64) assembler provided as an option within Visual Studio.
-;				(currently using VS Community 2022 17.9.6)
+;				(currently using VS Community 2022 17.14.10)
 ;
 ;				It provides external signatures that allow linkage to C and C++ programs,
 ;				where a shell/wrapper could encapsulate the methods as part of an object.
 ;
 ;				It has assembly time options directing the use of Intel processor extensions: AVX4, AVX2, SIMD, or none:
-;				(Z (512), Y (256), or X (128) registers, or regular Q (64bit)).
+;				(Z (512), Y (256), X (128) registers, or regular Q (64bit)).
 ;
 ;				If processor extensions are used, the caller must align the variables declared and passed
 ;				on the appropriate byte boundary (e.g. alignas 64 for 512)
@@ -30,7 +30,7 @@
 ;				This module is very light-weight (less than 1K bytes) and relatively fast,
 ;				but is not intended for all processor types or all environments. 
 ;
-;				Use for private (hobbyist), or instructional, or as an example for more ambitious projects is all it is meant to be.
+;				Use for private (hobbyist), or instructional, or as an example for more ambitious projects.
 ;
 ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;
@@ -61,12 +61,14 @@
 
 				INCLUDE			ui512aMacros.inc
 				OPTION			casemap:none
-.CODE
-				OPTION			PROLOGUE:none
-				OPTION			EPILOGUE:none
 
-				MemConstants
+ui512D			SEGMENT			PARA 'DATA'							; Declare a data segment	
+				MemConstants										; Generate memory resident constants
+ui512D			ENDS												; end of data segment
 
+				VerifyRegs											; if option is turned on (in macros include),
+																	; generate a debug routine for register integrity validation
+				
 ;
 ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;			zero_u		-	fill supplied 512bit (8 QWORDS) with zero
@@ -74,10 +76,10 @@
 ;			destarr		-	Address of destination 64 byte alligned array of 8 64-bit words (QWORDS) 512 bits (in RCX)
 ;			returns		-	nothing
 ;
-zero_u			PROC			PUBLIC
+				Leaf_Entry		zero_u, ui512						; Declare code section, public proc, no prolog, no frame, exceptions handled by caller
 				Zero512			RCX									; Zero 512 bit space addressed in RCX (the parameter)
-				RET		
-zero_u			ENDP 
+				RET	
+				Leaf_End		zero_u, ui512						; end of proc, end of section
 
 ;
 ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -87,10 +89,10 @@ zero_u			ENDP
 ;			srcarr		-	Address of source 64 byte aligned array of 8 64-bit QWORDS (512 bits) in RDX
 ;			returns		-	nothing
 ;
-copy_u			PROC			PUBLIC
+				Leaf_Entry		copy_u, ui512						; Declare code section, public proc, no prolog, no frame, exceptions handled by caller
 				Copy512			RCX, RDX							; Copy 512 bit space from scr array (address in RDX) to dest (RCX)
 				RET	
-copy_u			ENDP
+				Leaf_End		copy_u, ui512						; end of proc, end of section
 
 ;
 ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -100,11 +102,11 @@ copy_u			ENDP
 ;			src			-	u64 value in RDX
 ;			returns		-	nothing
 ;
-set_uT64		PROC			PUBLIC
+				Leaf_Entry		set_uT64, ui512						; Declare code section, public proc, no prolog, no frame, exceptions handled by caller
 				Zero512			RCX	
 				MOV				Q_PTR [ RCX ] [ 7 * 8 ], RDX
 				RET	
-set_uT64		ENDP
+				Leaf_End		set_uT64, ui512						; end of proc, end of section
 
 ;
 ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -115,7 +117,7 @@ set_uT64		ENDP
 ;			returns		-	(0) for equal, -1 for lh_op is less than rh_op, 1 for lh_op is greater than rh_op 
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 ;
-compare_u		PROC			PUBLIC
+				Leaf_Entry		compare_u, ui512					; Declare code section, public proc, no prolog, no frame, exceptions handled by caller
 
 				CheckAlign		RCX
 				CheckAlign		RDX
@@ -188,7 +190,7 @@ compare_u		PROC			PUBLIC
 				CMOVB			EAX, ret_1							; 'below' is less than for an unsigned integer
 				RET
 	ENDIF
-compare_u		ENDP 
+				Leaf_End		compare_u, ui512					; end of proc, end of section 
 
 ;
 ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -199,7 +201,7 @@ compare_u		ENDP
 ;			returns		-	(0) for equal, -1 for less than, 1 for greater than
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 ;
-compare_uT64	PROC			PUBLIC
+				Leaf_Entry		compare_uT64, ui512					; Declare code section, public proc, no prolog, no frame, exceptions handled by caller
 				
 				CheckAlign		RCX
 
@@ -240,7 +242,7 @@ compare_uT64	PROC			PUBLIC
 				CMOVB			EAX, ret_1							; 'below' is less than for an unsigned integer
 				RET
 	ENDIF
-compare_uT64 ENDP
+				Leaf_End		compare_uT64, ui512					; end of proc, end of section
 
 ;
 ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -252,7 +254,7 @@ compare_uT64 ENDP
 ;			returns		-	zero for no carry, 1 for carry (overflow)
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 ;
-add_u			PROC			PUBLIC 
+				Leaf_Entry		add_u, ui512						; Declare code section, public proc, no prolog, no frame, exceptions handled by caller
 
 				CheckAlign		RCX
 				CheckAlign		RDX
@@ -267,14 +269,14 @@ add_u			PROC			PUBLIC
 ;		Special case: if highest order word carried, set overflow
 ;		Add of carries may cause additional carries, so repeat until no carries
 ;
-;		Best case: no carries - 12 instructions.
-;		Worst case: 0xFFF...FFF + 1: an eight word cascading carry all the way to overflow: loops seven times - 82 instruction
+;		Best case: no carries: 12 instructions.
+;		Worst case: 0xFFF...FFF + 1: an eight word cascading carry all the way to overflow: loops seven times - 82 instructions.
 ;
 ; Load operands				
 				VMOVDQA64		ZMM30, ZM_PTR [RDX]					; ZMM30 = addend1 (8 QWORDs)
 				VMOVDQA64		ZMM31, ZM_PTR [R8]					; ZMM31 = addend2 (8 QWORDs)
 
-; Set up loop variables: R9 to be broadcast for adding carries (a one), RAX for tracking all the carries
+; Set up loop variables: R9 to be broadcast for adding carries (a one), RAX for tracking the carries
 				XOR				R9, R9
 				INC				R9
 				XOR				RAX, RAX							; Carry flag and return code, persistant through iterations
@@ -293,7 +295,7 @@ add_u			PROC			PUBLIC
 				SHR				R8, 1								; Shift right: carry-in for each lane (from lane i+1 to i)	
 				JZ				@@saveexit							; if, after alignment shift, there are no carries: save and exit
 
-; anything else, and for as long as these additions cause carries, add one to each carried into SIMD lane
+; anything else, and for as long as these carrry additions cause additional carries, add one to each carried into SIMD lane
 				KMOVB			K1, R8
 				VPBROADCASTQ	ZMM28 { k1 } { z }, R9				; ZMM28 = carry-ins broadcast to selected lanes, zero non-selected lanes
 				VPADDQ			ZMM29 { k1 }, ZMM29, ZMM28			; Add carry-ins to selected lanes
@@ -307,6 +309,7 @@ add_u			PROC			PUBLIC
 				RET													; EAX carries return code (from carry computation above)
 
 	ELSE
+; if not using "Z" SIMD, then use Q regs, roughly 27 instructions counting return code, return				
 				MOV				RAX, Q_PTR [ RDX ] [ 7 * 8 ]
 				ADD				RAX, Q_PTR [ R8 ] [ 7 * 8 ]
 				MOV				Q_PTR [ RCX ] [ 7 * 8 ], RAX
@@ -323,7 +326,7 @@ add_u			PROC			PUBLIC
 				RET	
 
 	ENDIF
-add_u			ENDP
+				Leaf_End		add_u, ui512						; end of proc, end of section
 
 ;
 ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -335,7 +338,7 @@ add_u			ENDP
 ;			returns		-	zero for no carry, 1 for carry (overflow)
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 ;
-add_uT64		PROC			PUBLIC 
+				Leaf_Entry		add_uT64, ui512						; Declare code section, public proc, no prolog, no frame, exceptions handled by caller
 
 				CheckAlign		RCX
 				CheckAlign		RDX
@@ -396,7 +399,7 @@ add_uT64		PROC			PUBLIC
 				RET	
 	ENDIF
 
-add_uT64		ENDP 
+				Leaf_End		add_uT64, ui512						; end of proc, end of section 
 ;
 ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;			sub_u		-	subtract supplied 512bit (8 QWORDS) RH OP from LH OP giving difference in destination
@@ -407,7 +410,7 @@ add_uT64		ENDP
 ;			returns		-	zero for no borrow, 1 for borrow (underflow)
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 ;
-sub_u			PROC			PUBLIC 
+				Leaf_Entry		sub_u, ui512						; Declare code section, public proc, no prolog, no frame, exceptions handled by caller
 
 				CheckAlign		RCX
 				CheckAlign		RDX
@@ -466,7 +469,7 @@ sub_u			PROC			PUBLIC
 				CMOVC			EAX, ret1
 				RET
 	ENDIF
-sub_u			ENDP 
+				Leaf_End		sub_u, ui512						; end of proc, end of section 
 
 ;
 ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -478,7 +481,7 @@ sub_u			ENDP
 ;			returns		-	zero for no borrow, 1 for borrow (underflow)
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 ;
-sub_uT64		PROC			PUBLIC 
+				Leaf_Entry		sub_uT64, ui512						; Declare code section, public proc, no prolog, no frame, exceptions handled by caller
 
 				CheckAlign		RCX
 				CheckAlign		RDX
@@ -537,6 +540,6 @@ sub_uT64		PROC			PUBLIC
 				RET
 	ENDIF
 
-sub_uT64		ENDP 
+				Leaf_End		sub_uT64, ui512						; end of proc, end of section
 
 				END
