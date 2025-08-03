@@ -62,7 +62,7 @@
 				INCLUDE			ui512aMacros.inc
 				OPTION			casemap:none
 
-ui512D			SEGMENT			PARA 'DATA'							; Declare a data segment	
+ui512D			SEGMENT			'DATA'	ALIGN (64)					; Declare a data segment	
 				MemConstants										; Generate memory resident constants
 ui512D			ENDS												; end of data segment
 

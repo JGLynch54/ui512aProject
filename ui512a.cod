@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler (x64) Version 14.44.35213.0   08/02/25 14:06:04
+Microsoft (R) Macro Assembler (x64) Version 14.44.35213.0   08/02/25 20:06:54
 ui512a.asm						     Page 1 - 1
 
 
@@ -319,6 +319,8 @@ ui512a.asm						     Page 1 - 1
 			      C ENDIF
 			      C 
 			      C MemConstants	MACRO
+			      C 
+			      C qOnes			QWORD           8 DUP (0ffffffffffffffffh)
 			      C ;
 			      C zeroQ			DQ				0
 			      C mskHex100		DD				0100h
@@ -450,24 +452,27 @@ ui512a.asm						     Page 1 - 1
 			      C 
 								OPTION			casemap:none
 
- 00000000			ui512D			SEGMENT			PARA 'DATA'							; Declare a data segment	
+ 00000000			ui512D			SEGMENT			'DATA'	ALIGN (64)					; Declare a data segment	
 								MemConstants										; Generate memory resident constants
- 00000000		     1	zeroQ			DQ				0
+ 00000000  00000008 [	     1	qOnes			QWORD           8 DUP (0ffffffffffffffffh)
+	    FFFFFFFFFFFFFFFF
+	   ]
+ 00000040		     1	zeroQ			DQ				0
 	   0000000000000000
- 00000008 00000100	     1	mskHex100		DD				0100h
- 0000000C 00000000	     1	ret0			DD				0								
- 00000010 00000001	     1	ret1			DD				1
- 00000014 FFFFFFFF	     1	ret_1			DD				-1
- 00000018 FF		     1	mskAll8			DB				255
- 00000019 01		     1	mskB0			DB				1
- 0000001A 02		     1	mskB1			DB				2
- 0000001B 04		     1	mskB2			DB				4
- 0000001C 08		     1	mskB3			DB				8
- 0000001D 10		     1	mskB4			DB				16
- 0000001E 20		     1	mskB5			DB				32
- 0000001F 40		     1	mskB6			DB				64
- 00000020 80		     1	mskB7			DB				128
- 00000021			ui512D			ENDS												; end of data segment
+ 00000048 00000100	     1	mskHex100		DD				0100h
+ 0000004C 00000000	     1	ret0			DD				0								
+ 00000050 00000001	     1	ret1			DD				1
+ 00000054 FFFFFFFF	     1	ret_1			DD				-1
+ 00000058 FF		     1	mskAll8			DB				255
+ 00000059 01		     1	mskB0			DB				1
+ 0000005A 02		     1	mskB1			DB				2
+ 0000005B 04		     1	mskB2			DB				4
+ 0000005C 08		     1	mskB3			DB				8
+ 0000005D 10		     1	mskB4			DB				16
+ 0000005E 20		     1	mskB5			DB				32
+ 0000005F 40		     1	mskB6			DB				64
+ 00000060 80		     1	mskB7			DB				128
+ 00000061			ui512D			ENDS												; end of data segment
 
 								VerifyRegs											; if option is turned on (in macros include),
  00000000		     2	ui512			SEGMENT			PARA 'CODE'
@@ -599,11 +604,11 @@ ui512a.asm						     Page 1 - 1
  000000D5  D1 E0						SHL				EAX, 1
  000000D7  0F BC C0						BSF				EAX, EAX
  000000DA  44/ 3B C0						CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
- 000000DD  8B 05 0000000C R					MOV				EAX, ret0
+ 000000DD  8B 05 0000004C R					MOV				EAX, ret0
  000000E3  0F 47 05						CMOVA			EAX, ret1
-	   00000010 R
+	   00000050 R
  000000EA  0F 42 05						CMOVB			EAX, ret_1
-	   00000014 R
+	   00000054 R
  000000F1  C3							RET
 
 					ELSEIF	__UseY
@@ -652,11 +657,11 @@ ui512a.asm						     Page 1 - 1
  00000141  D1 E0						SHL				EAX, 1
  00000143  0F BC C0						BSF				EAX, EAX
  00000146  44/ 3B C0						CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
- 00000149  8B 05 0000000C R					MOV				EAX, ret0
+ 00000149  8B 05 0000004C R					MOV				EAX, ret0
  0000014F  0F 47 05						CMOVA			EAX, ret1
-	   00000010 R
+	   00000050 R
  00000156  0F 42 05						CMOVB			EAX, ret_1
-	   00000014 R
+	   00000054 R
  0000015D  C3							RET
 
 					ELSE
@@ -773,7 +778,7 @@ ui512a.asm						     Page 1 - 1
  000001D0  62 61 FD 48/ 6F					VMOVDQA64		ZMM30, ZM_PTR [RDX]					; ZMM30 = addend1 (8 QWORDs)
 	   32
  000001D6  C5 F9/ 90 0D						KMOVB			K1, mskB7							; mask for least significant word
-	   00000020 R
+	   00000060 R
  000001DE  62 42 FD C9/ 7C					VPBROADCASTQ	ZMM31 { k1 } { z }, R8				; ZMM31 now 512 bit version of passed addend2
 	   F8
 
@@ -917,7 +922,7 @@ ui512a.asm						     Page 1 - 1
  000002A0  62 61 FD 48/ 6F					VMOVDQA64		ZMM30, ZM_PTR [RDX]			        ; Load lh_op
 	   32
  000002A6  C5 F9/ 90 0D						KMOVB			K1, mskB7							; mask for least significant word
-	   00000020 R
+	   00000060 R
  000002AE  62 42 FD C9/ 7C					VPBROADCASTQ	ZMM31 { k1 } { z }, R8				; ZMM31 now 512 bit version of passed rh_op
 	   F8
 
@@ -965,7 +970,7 @@ ui512a.asm						     Page 1 - 1
  00000300		     1	ui512			ENDS
 
 								END
-Microsoft (R) Macro Assembler (x64) Version 14.44.35213.0   08/02/25 14:06:04
+Microsoft (R) Macro Assembler (x64) Version 14.44.35213.0   08/02/25 20:06:54
 ui512a.asm						     Symbols 2 - 1
 
 
@@ -1010,7 +1015,7 @@ Segments:
 
                 N a m e                  Length   Align   Class
 
-ui512D . . . . . . . . . . . . .	 00000021 16	  'DATA'	
+ui512D . . . . . . . . . . . . .	 00000061 64	  'DATA'	
 ui512  . . . . . . . . . . . . .	 00000300 16	  'CODE'	
 
 
@@ -1074,21 +1079,22 @@ __UseZ . . . . . . . . . . . . .	Number	 00000001h
 __VerifyRegs . . . . . . . . . .	Number	 00000001h   
 m32BCST  . . . . . . . . . . . .	Text   	 DWORD BCST
 m64BCST  . . . . . . . . . . . .	Text   	 QWORD BCST
-mskAll8  . . . . . . . . . . . .	Byte	 00000018 ui512D	
-mskB0  . . . . . . . . . . . . .	Byte	 00000019 ui512D	
-mskB1  . . . . . . . . . . . . .	Byte	 0000001A ui512D	
-mskB2  . . . . . . . . . . . . .	Byte	 0000001B ui512D	
-mskB3  . . . . . . . . . . . . .	Byte	 0000001C ui512D	
-mskB4  . . . . . . . . . . . . .	Byte	 0000001D ui512D	
-mskB5  . . . . . . . . . . . . .	Byte	 0000001E ui512D	
-mskB6  . . . . . . . . . . . . .	Byte	 0000001F ui512D	
-mskB7  . . . . . . . . . . . . .	Byte	 00000020 ui512D	
-mskHex100  . . . . . . . . . . .	DWord	 00000008 ui512D	
-ret0 . . . . . . . . . . . . . .	DWord	 0000000C ui512D	
-ret1 . . . . . . . . . . . . . .	DWord	 00000010 ui512D	
-ret_1  . . . . . . . . . . . . .	DWord	 00000014 ui512D	
+mskAll8  . . . . . . . . . . . .	Byte	 00000058 ui512D	
+mskB0  . . . . . . . . . . . . .	Byte	 00000059 ui512D	
+mskB1  . . . . . . . . . . . . .	Byte	 0000005A ui512D	
+mskB2  . . . . . . . . . . . . .	Byte	 0000005B ui512D	
+mskB3  . . . . . . . . . . . . .	Byte	 0000005C ui512D	
+mskB4  . . . . . . . . . . . . .	Byte	 0000005D ui512D	
+mskB5  . . . . . . . . . . . . .	Byte	 0000005E ui512D	
+mskB6  . . . . . . . . . . . . .	Byte	 0000005F ui512D	
+mskB7  . . . . . . . . . . . . .	Byte	 00000060 ui512D	
+mskHex100  . . . . . . . . . . .	DWord	 00000048 ui512D	
+qOnes  . . . . . . . . . . . . .	QWord	 00000000 ui512D	
+ret0 . . . . . . . . . . . . . .	DWord	 0000004C ui512D	
+ret1 . . . . . . . . . . . . . .	DWord	 00000050 ui512D	
+ret_1  . . . . . . . . . . . . .	DWord	 00000054 ui512D	
 ui512aMacros_INC . . . . . . . .	Text   	 1
-zeroQ  . . . . . . . . . . . . .	QWord	 00000000 ui512D	
+zeroQ  . . . . . . . . . . . . .	QWord	 00000040 ui512D	
 
 	   0 Warnings
 	   0 Errors

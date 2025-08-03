@@ -9,7 +9,7 @@
 //		The basic operations : zero, copy, compare, add, subtract.
 //		Other optional modules provide bit ops and multiply / divide.
 //		It is written in assembly language, using the MASM ( ml64 ) assembler provided as an option within Visual Studio.
-//		( currently using VS Community 2022 17.9.6 )
+//		( currently using VS Community 2022 17.14.10)
 //		It provides external signatures that allow linkage to C and C++ programs,
 //		where a shell / wrapper could encapsulate the methods as part of an object.
 //		It has assembly time options directing the use of Intel processor extensions : AVX4, AVX2, SIMD, or none :

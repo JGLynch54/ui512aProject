@@ -16,7 +16,7 @@
 ;               ui512md provides multiply and divide.
 ;
 ;				It is written in assembly language, using the MASM (ml64) assembler provided as an option within Visual Studio.
-;				(currently using VS Community 2022 17.9.6)
+;				(currently using VS Community 2022 17.14.10)
 ;
 ;				It provides external signatures that allow linkage to C and C++ programs,
 ;				where a shell/wrapper could encapsulate the methods as part of an object.
@@ -309,6 +309,8 @@ VerifyRegs		MACRO
 ENDIF
 
 MemConstants	MACRO
+
+qOnes			QWORD           8 DUP (0ffffffffffffffffh)
 ;
 zeroQ			DQ				0
 mskHex100		DD				0100h
