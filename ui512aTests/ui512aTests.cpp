@@ -16,13 +16,13 @@
 //		( Z ( 512 ), Y ( 256 ), or X ( 128 ) registers, or regular Q ( 64bit ) ).
 //		If processor extensions are used, the caller must align the variables declared and passed
 //		on the appropriate byte boundary ( e.g. alignas 64 for 512 )
-//		This module is very light - weight ( less than 1K bytes ) and relatively fast,
+//		This module is very light-weight ( less than 1K bytes ) and relatively fast,
 //		but is not intended for all processor types or all environments.
 //		Use for private ( hobbyist ), or instructional,
-//		or as an example for more ambitious projects is all it is meant to be.
+//		or as an example for more ambitious projects.
 //
 //		This sub - project: ui512aTests, is a unit test project that invokes each of the routines in the ui512a assembly.
-//		It runs each assembler proc with pseudo - random values.
+//		It runs each assembler proc with pseudo-random values.
 //		It validates ( asserts ) expected and returned results.
 //		It also runs each repeatedly for comparative timings.
 //		It provides a means to invoke and debug.
@@ -30,7 +30,7 @@
 
 #include "pch.h"
 #include "CppUnitTest.h"
-
+#include <stdio.h>
 #include <format>
 
 #include "ui512a.h"
@@ -52,6 +52,7 @@ namespace ui512aTests
 		/// uses linear congruential method 
 		/// ref: Knuth, Art Of Computer Programming, Vol. 2, Seminumerical Algorithms, 3rd Ed. Sec 3.2.1
 		/// </summary>
+		/// Note: I use this rather than built-in random functions because it produced repeatable results. Handy for debugging.
 		/// <param name="seed">if zero, will supply with: 4294967291</param>
 		/// <returns>Pseudo-random number from zero to ~2^64 (18446744073709551557)</returns>
 		u64 RandomU64(u64* seed)
@@ -77,7 +78,7 @@ namespace ui512aTests
 			float deviation = 0.0;
 			float D = 0.0;
 			float sumD = 0.0;
-			float varience = 0.0;
+			float variance = 0.0;
 			const u32 randomcount = 1000000;
 			const s32 norm = randomcount / dec;
 			for (u32 i = 0; i < randomcount; i++)
@@ -99,10 +100,10 @@ namespace ui512aTests
 				deviation = float(abs(long(norm) - long(dist[i])));
 				D = (deviation * deviation) / float(long(norm));
 				sumD += D;
-				varience = float(deviation) / float(norm) * 100.0f;
-				varsum += varience;
+				variance = float(deviation) / float(norm) * 100.0f;
+				varsum += variance;
 				msgd += format("\t{:6d}", dist[i]);
-				msgv += format("\t{:5.3f}% ", varience);
+				msgv += format("\t{:5.3f}% ", variance);
 				msgchi += format("\t{:5.3f}% ", D);
 				distc += dist[i];
 			};
@@ -113,7 +114,7 @@ namespace ui512aTests
 			msgv += format("\t{:6.3f}% ", varsum);
 			msgv += '\n';
 			Logger::WriteMessage(msgv.c_str());
-			msgchi += "\t\tChi distribution: ";
+			msgchi += "\t\tChi-squared distribution: ";
 			msgchi += format("\t{:6.3f}% ", sumD);
 			msgchi += '\n';
 			Logger::WriteMessage(msgchi.c_str());
@@ -131,7 +132,8 @@ namespace ui512aTests
 				{
 					num1[j] = RandomU64(&seed);
 				};
-
+				string m = "\tZero field at=0x%llx\n";
+				const char* mc = "\tZero field at=0x%llx\n";
 				zero_u(num1);
 				for (int j = 0; j < 8; j++)
 				{
@@ -148,6 +150,8 @@ namespace ui512aTests
 		{
 			// Zero function timing. Run function a bunch of times. See if coding changes improve/reduce overall timing.
 			// Eliminate everything possible except just repeatedly calling the function.
+			// I'm not using chrono timing here as the point isn't to get absolute timing, but differences in bulk timing, 
+			// for example over 10 million runs is it faster slower with this change or not? if run as "Z" is it faster than "Q"?
 			u64 seed = 0;
 			alignas (64) u64 num1[8]
 			{
@@ -418,7 +422,7 @@ namespace ui512aTests
 				for (int j = 0; j < 8; j++)
 				{
 					num1[j] = RandomU64(&seed);
-					num1[j] = RandomU64(&seed);
+					num2[j] = RandomU64(&seed);
 				};
 				u64 val = RandomU64(&seed);
 				r_before.Clear();
@@ -528,7 +532,7 @@ namespace ui512aTests
 
 			alignas (64) u64 cascade1[8]{ 0xFFFFFFFFFFFFFFFF, 0, 0, 0xFFFFFFFFFFFFFFFF, 0, 0xFFFFFFFFFFFFFFFF, 0xFFFFFFFFFFFFFFFF, 1 };
 			alignas (64) u64 cascade2[8]{ 10, 0, 0, 2, 0, 0, 5, 1 };
-			// should: lane by lane from the right: add to 2; add yield 4 with carry ; carry in cascade to 0 with carry; add to 1
+			// should: lane by lane from the right: add yielding 2; add yield 4 with carry ; carry in cascade to 0 with carry; add to 1
 			//		add yield 1 with carry, carry in to 1, add to 0, add to 9 with overflow
 			//		first lane by lane gives three carries (including overflow) lanes 0, 3, 6
 			//		causes second iteration of carry in adds, causing carry in lane 5
@@ -733,7 +737,7 @@ namespace ui512aTests
 			Logger::WriteMessage(L"Passed. Tested expected values via assert.\n");
 		};
 
-		TEST_METHOD(ui512a_07_add64_timimg)
+		TEST_METHOD(ui512a_07_add64_timing)
 		{
 			alignas (64) u64 num1[8]{ 1, 2, 3, 4, 5, 6, 7, 8 };
 			alignas (64) u64 sum[8]{ 0, 0, 0, 0, 0, 0, 0, 0 };

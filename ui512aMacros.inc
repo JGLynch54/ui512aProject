@@ -1,5 +1,4 @@
 
-.NOLIST
 ;
 ;			ui512aMacros
 ;
@@ -56,7 +55,7 @@
 ;				OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 ;				SOFTWARE.
 ;
-.LIST
+
 IFNDEF			ui512aMacros_INC
 ui512aMacros_INC EQU			<1>
 
@@ -66,6 +65,7 @@ ui512aMacros_INC EQU			<1>
 ;	// void zero_u ( u64* destarr ); 
 ;	// fill supplied 512bit (8 QWORDS) with zero
 EXTERNDEF		zero_u:PROC
+
 
 ;	// void copy_u ( u64* destarr, u64* srcarr );
 ;	// copy supplied 512bit (8 QWORDS) source to supplied destination
@@ -107,7 +107,7 @@ EXTERNDEF		sub_uT64:PROC
 ;
 ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;			EXTERNDEF		reg_verify:PROC	;	void reg_verify ( u64* regstruct)
-;			reg_verify		-	copy non-volitile regs into callers struct of nine qwords) intended for uit tests to verify non-volitile regs are not changed
+;			reg_verify		-	copy non-volatile regs into callers struct of nine qwords) intended for unit tests to verify non-volatile regs are not changed
 ;			Prototype:		-	void reg_verify( uu64* regstruct);
 ;			regstruct		-	Address of 9 QWORDS in a struct where regs will be copied (in RCX)
 ; //			reg_verify		-	save non-volatile regs for verification (debug)
@@ -120,12 +120,13 @@ __UseY			EQU				0									; Use AVX2 processor features (256 bit registers and i
 __UseX			EQU				0									; Use SIMD/SSE processor features (128 bit registers and instructions)
 __UseQ			EQU				0									; Do not use extensions, use standard x64 bit registers and instructions
 ;
-__VerifyRegs	EQU				1									; in debug mode, or with unit tests, define routine to verofy non-volitile regs 
+__VerifyRegs	EQU				1									; in debug mode, or with unit tests, define routine to verify non-volatile regs 
 __CheckAlign	EQU				0									; User is expected to pass arguments aligned on 64 byte boundaries, 
-																	; This setting enforces that with a check. It should not be necessary, but included to help debugging
+;																	; This setting enforces that with a check. It should not be necessary, but included to help debugging
+
 
 ;           Some coding shortcuts
-ZM_PTR			EQU				ZMMWORD PTR
+ZM_PTR			EQU				ZMMWORD PTR 
 YM_PTR			EQU				YMMWORD PTR
 XM_PTR			EQU				XMMWORD PTR
 Q_PTR			EQU				QWORD PTR
@@ -134,7 +135,7 @@ W_PTR			EQU				WORD PTR
 B_PTR			EQU				BYTE PTR
 m32BCST			EQU				DWORD BCST
 m64BCST			EQU				QWORD BCST
-
+LPVOID			TYPEDEF			PTR VOID
 ;			mask codes (for compares using instructions like VPCMPUQ)
 CPEQ			EQU				0
 CPLT			EQU				1
@@ -157,15 +158,13 @@ MaskBit7		EQU				B_PTR [ 10000000b ]
 
 ;			Another way to get masks
 kMask			RECORD			b8:1, b7:1, b6:1, b5:1, b4:1, b3:1, b2:1, b1:1, b0:1
-;==========================================================================================
-;           Notes on x64 calling conventions        aka "fast call"
+;==================================================================================================
+;           Notes on x64 calling conventions        specifically "fast call"
 ; ref: https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170
-; The first four parameters are passed in registers: RCX, RDX, R8, R9 if integer or address
+; The callers first four parameters are passed in registers: RCX, RDX, R8, R9 if integer or address
 ; if floating point XMM0L, XMM1L, XMM2L, XMM3L
 ; return (if any) is in EAX
-;===========================================================================================
 ;
-;===========================================================================================
 ; RAX, RCX, RDX, R8, R9, R10, R11 are considered volatile, and do not need to be saved
 ; XMM0, YMM0, ZMM0 and  ..1, ..2, ..3, ..4, and ..5 are considered volatile,
 ;	and do not need to be saved
@@ -177,36 +176,14 @@ kMask			RECORD			b8:1, b7:1, b6:1, b5:1, b4:1, b3:1, b2:1, b1:1, b0:1
 ; A "leaf" function is one that does not call and does not change non volatile registers
 ; leaf functionss therefore do not need frame, prolog or epilog
 ;
-;===========================================================================================
+;==================================================================================================
 
-;===========================================================================================
+;==================================================================================================
 ; Selected macros from "macamd64.inc" (c) Microsoft Corporation
 ;	These macros generate .xdata and .pdata entries in the executable image file.
 ;	The entries assist in exception and debugging; helping 'unwind' operations.
 ;	Only a few macros are included, and are reformatted to match coding style:
-;	indents and captitaliztion.
-;===========================================================================================
-
-;++
-;
-; END_PROLOGUE
-;
-; Macro Description:
-;
-;   This macro marks the end of the prologue.  This must appear after all
-;   of the prologue directives in a nested function.
-;
-; Arguments:
-;
-;   None.
-;
-;--
-
-End_Prolog		MACRO
-				.ENDPROLOG
-				 ENDM
-
-;++
+;	indents and capitalization.
 ;
 ; LEAF_ENTRY <Name>, <Section>, <NoPad>
 ;
@@ -235,18 +212,15 @@ End_Prolog		MACRO
 ;           calling standard dictates that functions (nested and leaf) must
 ;           be prefixed with padding.
 ;
-;--
-
 Leaf_Entry		MACRO			Name, Section
 Section			SEGMENT			PARA 'CODE'
 				DB				6 DUP (0cch)
 				ALIGN			16
 				PUBLIC			Name
 Name			PROC			FRAME
-				End_Prolog
+				.ENDPROLOG
 				ENDM
 
-;++
 ;
 ; LEAF_END <Name>, <Section>
 ;
@@ -265,8 +239,6 @@ Name			PROC			FRAME
 ;             is to appear.  Must match that supplied to the corresponding
 ;             LEAF_ENTRY macro.
 ;
-;--
-
 Leaf_End		MACRO			Name, Section
 Name			ENDP
 Section			ENDS
@@ -277,9 +249,12 @@ Section			ENDS
 ;===========================================================================================
 
 ;
+; CheckAlign <RAddr>
+;
 ;			Test passed variable addresses for 64 byte alignment
 ;			Note: Better performance if this is off, but for debugging, maybe have it on
 ;
+
 CheckAlign		MACRO			Raddr
 				LOCAL			ok
 	IF	__CheckAlign
@@ -289,7 +264,13 @@ CheckAlign		MACRO			Raddr
 ok:
 	ENDIF
 				ENDM
-				
+
+;
+; VerifyRegs <none>
+;
+;			If option is on, generate a function, callable by unit test routines, 
+;				to save non-volatile registers in passed structure.
+;
 IF	__VerifyRegs
 
 VerifyRegs		MACRO
@@ -308,6 +289,11 @@ VerifyRegs		MACRO
 				ENDM
 ENDIF
 
+;
+; MemConstants <none>
+;
+;		Define useful constants
+;
 MemConstants	MACRO
 
 qOnes			QWORD           8 DUP (0ffffffffffffffffh)
@@ -369,6 +355,7 @@ Zero512Q		MACRO			dest:REQ
 				ENDM
 
 				ENDM
+
 ;
 ;			Copy a 512 bit source to destination, conditional assembly based on configuration parameters
 ;
@@ -403,6 +390,7 @@ Copy512			MACRO			dest:REQ, src:REQ
 				ENDM
 	ENDIF
 				ENDM
+
 ;
 ;			Copy a 512 bit source to destination, always use Q_PTR, avoids clock penalty from using SIMD
 ;
@@ -414,28 +402,4 @@ Copy512Q		MACRO			dest:REQ, src:REQ
 
 				ENDM
 
-;
-;			Get a GP reg QWORD from within a Z register as specified by mask
-;			Note: RAX, ZMM0 and k1 are used and not restored
-;			Example usage: GetZatIdx R11, ZMM1, MaskBit2 or SetZatIdx ZMM1, R12, [ R9 ]  (where R9 is a bit mask, not an integer index)
-;			Note: These are req to reg ops; no memory fetches (other than instructions from pipeline)
-;
-GetZatMask		MACRO			dest, src, mask
-				LEA				RAX,  mask
-				KMOVB			k1, RAX
-				VPCOMPRESSQ		ZMM0 {k1}{z}, src
-				VMOVQ			dest, XMM0
-				ENDM
-
-;
-;			Set a GP Reg QWORD within a Z register as specified by mask
-;			Note: RAX and k1 are used and not restored
-;			Example usage: SetZatIdx ZMM1, R8, MaskBit2
-;			Note: These are req to reg ops; no memory fetches (other than instructions from pipeline)
-;
-SetZatMask		MACRO			dest, src, mask
-				LEA				RAX, mask
-				KMOVB			k1, RAX
-				VPBROADCASTQ 	dest {k1}, src
-				ENDM
-ENDIF
+ENDIF	; IFNDEF			ui512aMacros_INC
