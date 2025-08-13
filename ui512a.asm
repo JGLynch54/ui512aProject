@@ -1,3 +1,6 @@
+IFNDEF		legalnotes
+legalnotes	EQU		1
+.LIST
 ;
 ;			ui512a
 ;
@@ -23,6 +26,8 @@
 ;
 ;				It has assembly time options directing the use of Intel processor extensions: AVX4, AVX2, SIMD, or none:
 ;				(Z (512), Y (256), X (128) registers, or regular Q (64bit)).
+;
+;				Note: The file "compile_time_options.inc" contains the options that can be configured for extension usage, and other options.
 ;
 ;				If processor extensions are used, the caller must align the variables declared and passed
 ;				on the appropriate byte boundary (e.g. alignas 64 for 512)
@@ -58,7 +63,9 @@
 ;
 ;
 ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
+ENDIF			; legal notes
 
+				INCLUDE			compile_time_options.inc
 				INCLUDE			ui512aMacros.inc
 				OPTION			casemap:none
 
@@ -146,7 +153,7 @@ ui512D			ENDS												; end of data segment
 				CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
 				MOV				EAX, ret0
 				CMOVA			EAX, ret1
-				CMOVB			EAX, ret_1
+				CMOVB			EAX, ret_minus_1
 				RET
 
 	ELSEIF	__UseY
@@ -180,7 +187,7 @@ ui512D			ENDS												; end of data segment
 @@:
 				MOV				EAX, ret0
 				CMOVA			EAX, ret1
-				CMOVB			EAX, ret_1
+				CMOVB			EAX, ret_minus_1
 				RET
 
 	ELSE
@@ -193,7 +200,7 @@ ui512D			ENDS												; end of data segment
 @@:
 				MOV				RAX, 0
 				CMOVA			EAX, ret1							; 'above' is greater than for an unsigned integer
-				CMOVB			EAX, ret_1							; 'below' is less than for an unsigned integer
+				CMOVB			EAX, ret_minus_1					; 'below' is less than for an unsigned integer
 				RET
 
 	ENDIF
@@ -228,7 +235,7 @@ ui512D			ENDS												; end of data segment
 				CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
 				MOV				EAX, ret0
 				CMOVA			EAX, ret1
-				CMOVB			EAX, ret_1
+				CMOVB			EAX, ret_minus_1
 				RET
 
 	ELSE
@@ -244,7 +251,7 @@ ui512D			ENDS												; end of data segment
 				JNZ				@F
 				XOR				EAX, EAX
 @@:				CMOVA			EAX, ret1							; 'above' is greater than for an unsigned integer
-				CMOVB			EAX, ret_1							; 'below' is less than for an unsigned integer
+				CMOVB			EAX, ret_minus_1					; 'below' is less than for an unsigned integer
 				RET
 
 	ENDIF

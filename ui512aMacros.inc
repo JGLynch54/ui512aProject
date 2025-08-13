@@ -1,4 +1,6 @@
-
+IFNDEF		legalnotes
+legalnotes	EQU		1
+.LIST
 ;
 ;			ui512aMacros
 ;
@@ -22,6 +24,8 @@
 ;
 ;				It has assembly time options directing the use of Intel processor extensions: AVX4, AVX2, SIMD, or none:
 ;				(Z (512), Y (256), or X (128) registers, or regular Q (64bit)).
+;
+;				Note: The file "compile_time_options.inc" contains the options that can be configured for extension usage, and other options.
 ;
 ;				If processor extensions are used, the caller must align the variables declared and passed
 ;				on the appropriate byte boundary (e.g. alignas 64 for 512)
@@ -56,8 +60,11 @@
 ;				SOFTWARE.
 ;
 
+ENDIF			; legalnotes
+
 IFNDEF			ui512aMacros_INC
 ui512aMacros_INC EQU			<1>
+
 
 ;           header file equivalent extern declarations
 ;			EXTERN "C" signatures (from ui512a.asm)
@@ -105,25 +112,6 @@ EXTERNDEF		sub_u:PROC
 ;	// returns: zero for no borrow, 1 for borrow (underflow)
 EXTERNDEF		sub_uT64:PROC
 ;
-;--------------------------------------------------------------------------------------------------------------------------------------------------------------
-;			EXTERNDEF		reg_verify:PROC	;	void reg_verify ( u64* regstruct)
-;			reg_verify		-	copy non-volatile regs into callers struct of nine qwords) intended for unit tests to verify non-volatile regs are not changed
-;			Prototype:		-	void reg_verify( uu64* regstruct);
-;			regstruct		-	Address of 9 QWORDS in a struct where regs will be copied (in RCX)
-; //			reg_verify		-	save non-volatile regs for verification (debug)
-; //			Prototype		-	void reg_verify ( u64* reg struct)
-EXTERNDEF		reg_verify:PROC	;	void reg_verify ( u64* reg struct)
-
-;			Configuration choices
-__UseZ			EQU				1									; Use AVX4 processor features (512 bit registers and instructions)
-__UseY			EQU				0									; Use AVX2 processor features (256 bit registers and instructions)
-__UseX			EQU				0									; Use SIMD/SSE processor features (128 bit registers and instructions)
-__UseQ			EQU				0									; Do not use extensions, use standard x64 bit registers and instructions
-;
-__VerifyRegs	EQU				1									; in debug mode, or with unit tests, define routine to verify non-volatile regs 
-__CheckAlign	EQU				0									; User is expected to pass arguments aligned on 64 byte boundaries, 
-;																	; This setting enforces that with a check. It should not be necessary, but included to help debugging
-
 
 ;           Some coding shortcuts
 ZM_PTR			EQU				ZMMWORD PTR 
@@ -158,6 +146,35 @@ MaskBit7		EQU				B_PTR [ 10000000b ]
 
 ;			Another way to get masks
 kMask			RECORD			b8:1, b7:1, b6:1, b5:1, b4:1, b3:1, b2:1, b1:1, b0:1
+
+;
+; MemConstants <none>
+;
+;		Define useful constants
+;
+MemConstants	MACRO
+
+qOnes			QWORD           8 DUP (0ffffffffffffffffh)
+;
+zeroQ			DQ				0
+mskHex100		DD				0100h
+;		Return codes commonly used.			
+ret0			DD				0								
+ret1			DD				1
+ret_minus_1		DD				-1
+;		Masks commonly used
+mskAll8			DB				255
+mskB0			DB				1
+mskB1			DB				2
+mskB2			DB				4
+mskB3			DB				8
+mskB4			DB				16
+mskB5			DB				32
+mskB6			DB				64
+mskB7			DB				128
+
+				ENDM
+
 ;==================================================================================================
 ;           Notes on x64 calling conventions        specifically "fast call"
 ; ref: https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention?view=msvc-170
@@ -272,6 +289,14 @@ ok:
 ;				to save non-volatile registers in passed structure.
 ;
 IF	__VerifyRegs
+;--------------------------------------------------------------------------------------------------------------------------------------------------------------
+;			EXTERNDEF		reg_verify:PROC	;	void reg_verify ( u64* regstruct)
+;			reg_verify		-	copy non-volatile regs into callers struct of nine qwords) intended for unit tests to verify non-volatile regs are not changed
+;			Prototype:		-	void reg_verify( uu64* regstruct);
+;			regstruct		-	Address of 9 QWORDS in a struct where regs will be copied (in RCX)
+; //			reg_verify		-	save non-volatile regs for verification (debug)
+; //			Prototype		-	void reg_verify ( u64* reg struct)
+EXTERNDEF		reg_verify:PROC	;	void reg_verify ( u64* reg struct)
 
 VerifyRegs		MACRO
 				Leaf_Entry		reg_verify, ui512
@@ -288,34 +313,6 @@ VerifyRegs		MACRO
 				Leaf_End		reg_verify, ui512
 				ENDM
 ENDIF
-
-;
-; MemConstants <none>
-;
-;		Define useful constants
-;
-MemConstants	MACRO
-
-qOnes			QWORD           8 DUP (0ffffffffffffffffh)
-;
-zeroQ			DQ				0
-mskHex100		DD				0100h
-;		Return codes commonly used.			
-ret0			DD				0								
-ret1			DD				1
-ret_1			DD				-1
-;		Masks commonly used
-mskAll8			DB				255
-mskB0			DB				1
-mskB1			DB				2
-mskB2			DB				4
-mskB3			DB				8
-mskB4			DB				16
-mskB5			DB				32
-mskB6			DB				64
-mskB7			DB				128
-
-				ENDM
 
 ;
 ;			Zero a 512 bit destination, conditional assembly based on configuration parameters

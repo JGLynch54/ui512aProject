@@ -52,7 +52,7 @@ namespace ui512aTests
 		/// uses linear congruential method 
 		/// ref: Knuth, Art Of Computer Programming, Vol. 2, Seminumerical Algorithms, 3rd Ed. Sec 3.2.1
 		/// </summary>
-		/// Note: I use this rather than built-in random functions because it produced repeatable results. Handy for debugging.
+		/// Note: I use this rather than built-in random functions because it produces repeatable results. Handy for debugging.
 		/// <param name="seed">if zero, will supply with: 4294967291</param>
 		/// <returns>Pseudo-random number from zero to ~2^64 (18446744073709551557)</returns>
 		u64 RandomU64(u64* seed)
