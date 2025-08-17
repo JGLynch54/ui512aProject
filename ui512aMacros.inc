@@ -134,36 +134,31 @@ CPGE			EQU				5
 CPGT			EQU				6
 CPTRUE			EQU				7
 
-;			Mask values (for k reg) used to select particulare QWORDS from X, Y, or Z simd regs
-MaskBit0		EQU				B_PTR [ 00000001b ]
-MaskBit1		EQU				B_PTR [ 00000010b ]
-MaskBit2		EQU				B_PTR [ 00000100b ]
-MaskBit3		EQU				B_PTR [ 00001000b ]
-MaskBit4		EQU				B_PTR [ 00010000b ]
-MaskBit5		EQU				B_PTR [ 00100000b ]
-MaskBit6		EQU				B_PTR [ 01000000b ]
-MaskBit7		EQU				B_PTR [ 10000000b ]
-
-;			Another way to get masks
-kMask			RECORD			b8:1, b7:1, b6:1, b5:1, b4:1, b3:1, b2:1, b1:1, b0:1
-
 ;
 ; MemConstants <none>
 ;
 ;		Define useful constants
+;		Note: this must be first in a data segment aligned (64)
 ;
 MemConstants	MACRO
-
+; 
 qOnes			QWORD           8 DUP (0ffffffffffffffffh)
 ;
 zeroQ			DQ				0
-mskHex100		DD				0100h
-;		Return codes commonly used.			
-ret0			DD				0								
-ret1			DD				1
-ret_minus_1		DD				-1
+; maskHex100		DD				0100h
+;		Return codes commonly used.	
+retcode_zero	EQU				0
+retcode_one		EQU				1
+retcode_neg_one	EQU				-1
+;		Sometimes need to get it from memory, not an immediate value. So:
+ret_zero		DD				retcode_zero						
+ret_one			DD				retcode_one
+ret_neg_one		DD				retcode_neg_one
+
 ;		Masks commonly used
-mskAll8			DB				255
+;		Record form, whic can be used as immediate values
+kMask			RECORD			b8:1, b7:1, b6:1, b5:1, b4:1, b3:1, b2:1, b1:1, b0:1
+;		And as memory, for when immediately simply wont do
 mskB0			DB				1
 mskB1			DB				2
 mskB2			DB				4
@@ -172,7 +167,7 @@ mskB4			DB				16
 mskB5			DB				32
 mskB6			DB				64
 mskB7			DB				128
-
+mskAll8			DB				255
 				ENDM
 
 ;==================================================================================================

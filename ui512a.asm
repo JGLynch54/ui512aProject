@@ -148,12 +148,17 @@ ui512D			ENDS												; end of data segment
 				OR				EAX, MASK kMask.b8
 				SHL				R8D, 1								; shift to get bits 2 through 8
 				SHL				EAX, 1
-				BSF				R8D, R8D							; get bit number of right-most (most significant) 1 thru 8	
+		IF __UseBMI2
+				TZCNT			R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
+				TZCNT			EAX, EAX
+		ELSE		
+				BSF				R8D, R8D							; get bit number of right-most (most significant) 1 thru 8					
 				BSF				EAX, EAX
+		ENDIF
 				CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
-				MOV				EAX, ret0
-				CMOVA			EAX, ret1
-				CMOVB			EAX, ret_minus_1
+				LEA				EAX, [ 0 ]
+				CMOVA			EAX, ret_one
+				CMOVB			EAX, ret_neg_one
 				RET
 
 	ELSEIF	__UseY
@@ -167,8 +172,13 @@ ui512D			ENDS												; end of data segment
 				OR				EAX, MASK kMask.b8
 				SHL				R8D, 1								; shift so zero bit is one bit (so it doesnt get lost in BSF)
 				SHL				EAX, 1
+		IF __UseBMI2
+				TZCNT			R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
+				TZCNT			EAX, EAX
+		ELSE
 				BSF				R8D, R8D							; find most significant "LT" word
 				BSF				EAX, EAX							; same for 'GT' word
+		ENDIF
 				CMP				R8D, EAX							; most significant (either LT or GT), else fall through to look at least significant 4 qwords
 				JNE				@F
 				VMOVDQA64		YMM1, YM_PTR [ RCX ] [ 0 * 8 ]		; if the most significant 4 qwords were equal, have to look at least significant 4 qwords
@@ -181,13 +191,18 @@ ui512D			ENDS												; end of data segment
 				OR				EAX, MASK kMask.b8
 				SHL				R8D, 1								; shift so zero bit is one bit (so it doesnt get lost in BSR)
 				SHL				EAX, 1
-				BSF				R8D, R8D
-				BSF				EAX, EAX
+		IF __UseBMI2
+				TZCNT			R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
+				TZCNT			EAX, EAX
+		ELSE
+				BSF				R8D, R8D							; find most significant "LT" word
+				BSF				EAX, EAX							; same for 'GT' word
+		ENDIF
 				CMP				R8D, EAX	
 @@:
-				MOV				EAX, ret0
-				CMOVA			EAX, ret1
-				CMOVB			EAX, ret_minus_1
+				LEA				EAX, [ retcode_zero ]
+				CMOVA			EAX, ret_one
+				CMOVB			EAX, ret_neg_one
 				RET
 
 	ELSE
@@ -198,9 +213,9 @@ ui512D			ENDS												; end of data segment
 				JNZ				@F
 				ENDM
 @@:
-				MOV				RAX, 0
-				CMOVA			EAX, ret1							; 'above' is greater than for an unsigned integer
-				CMOVB			EAX, ret_minus_1					; 'below' is less than for an unsigned integer
+				LEA				RAX, [ retcode_zero ]
+				CMOVA			EAX, ret_one						; 'above' is greater than for an unsigned integer
+				CMOVB			EAX, ret_neg_one					; 'below' is less than for an unsigned integer
 				RET
 
 	ENDIF
@@ -230,12 +245,17 @@ ui512D			ENDS												; end of data segment
 				OR				EAX, MASK kMask.b8
 				SHL				R8D, 1								; shift to get bits 2 through 8
 				SHL				EAX, 1
-				BSF				R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
-				BSF				EAX, EAX
+		IF __UseBMI2
+				TZCNT			R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
+				TZCNT			EAX, EAX
+		ELSE
+				BSF				R8D, R8D							; find most significant "LT" word
+				BSF				EAX, EAX							; same for 'GT' word
+		ENDIF
 				CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
-				MOV				EAX, ret0
-				CMOVA			EAX, ret1
-				CMOVB			EAX, ret_minus_1
+				LEA				EAX, [ retcode_zero ]
+				CMOVA			EAX, ret_one
+				CMOVB			EAX, ret_neg_one
 				RET
 
 	ELSE
@@ -250,8 +270,8 @@ ui512D			ENDS												; end of data segment
 				CMP				RAX, RDX 
 				JNZ				@F
 				XOR				EAX, EAX
-@@:				CMOVA			EAX, ret1							; 'above' is greater than for an unsigned integer
-				CMOVB			EAX, ret_minus_1					; 'below' is less than for an unsigned integer
+@@:				CMOVA			EAX, ret_one					; 'above' is greater than for an unsigned integer
+				CMOVB			EAX, ret_neg_one				; 'below' is less than for an unsigned integer
 				RET
 
 	ENDIF
@@ -319,8 +339,8 @@ ui512D			ENDS												; end of data segment
 				ENDM
 
 ; Complete. Carry to return code
-				MOV				RAX, 0								; return carry flag as overflow
-				CMOVC			EAX, ret1
+				LEA				RAX, [ retcode_zero ]				; return carry flag as overflow
+				CMOVC			EAX, ret_one
 				RET	
 
 	ENDIF
@@ -370,7 +390,7 @@ ui512D			ENDS												; end of data segment
 ; Complete, extract carry out (overflow) for return code, store result sum at callers sum
 @@saveexit:
                 KMOVB			RAX, k7								; Move final carries done to RAX
-                AND				RAX, 1								; bit 0 (MSB carry-out)
+                AND				RAX, retcode_one					; bit 0 (MSB carry-out)
                 VMOVDQA64		ZM_PTR [ RCX ], ZMM29				; Store sum
                 RET													; EAX carries return code (from carry computation above)
 
@@ -388,8 +408,8 @@ ui512D			ENDS												; end of data segment
 				ENDM
 
 ; return zero unless carry still exists from addition
-				MOV				EAX, ret0
-				CMOVC			EAX, ret1
+				LEA				EAX, [ retcode_zero ]
+				CMOVC			EAX, ret_one
 				RET	
 
 	ENDIF
@@ -439,7 +459,7 @@ ui512D			ENDS												; end of data segment
 				JMP				@B
 @@saveexit:
                 KMOVB			RAX, k7								; Move final borrows done to RAX
-                AND				RAX, 1								; bit 0 (MSB borrow-out)
+                AND				RAX, retcode_one					; bit 0 (MSB borrow-out)
 				VMOVDQA64		ZM_PTR [RCX], ZMM29
 				RET
 
@@ -455,8 +475,8 @@ ui512D			ENDS												; end of data segment
 				MOV				[ RCX ] [ idx * 8 ], RAX
 				ENDM
 
-				MOV				RAX, 0								; return, set return code to zero if no remaining borrow, to one if there is a borrow
-				CMOVC			EAX, ret1
+				LEA				RAX, [ retcode_zero ]								; return, set return code to zero if no remaining borrow, to one if there is a borrow
+				CMOVC			EAX, ret_one
 				RET
 
 	ENDIF
@@ -507,7 +527,7 @@ ui512D			ENDS												; end of data segment
 				JMP				@B
 @@saveexit:
                 KMOVB			RAX, k7								; Move final borrows done to RAX
-                AND				RAX, 1								; bit 0 (MSB borrow-out)
+                AND				RAX, retcode_one					; bit 0 (MSB borrow-out)
 				VMOVDQA64		ZM_PTR [RCX], ZMM29
 				RET
 
@@ -523,8 +543,8 @@ ui512D			ENDS												; end of data segment
 				MOV				[ RCX ] [ idx * 8 ], RAX
 				ENDM
 
-				MOV				RAX, 0
-				CMOVC			EAX, ret1
+				LEA				RAX, [ retcode_zero ]
+				CMOVC			EAX, ret_one
 				RET
 
 	ENDIF
