@@ -33,7 +33,7 @@ legalnotes	EQU		1
 ;				This module is very light-weight (less than 2K bytes) and relatively fast,
 ;				but is not intended for all processor types or all environments. 
 ;
-;				Use for private (hobbyist), or instructional, or as an example for more ambitious projects is all it is meant to be.
+;				Use for private (hobbyist), or instructional, or as an example for more ambitious projects.
 ;
 ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
 ;
@@ -143,9 +143,8 @@ CPTRUE			EQU				7
 MemConstants	MACRO
 ; 
 qOnes			QWORD           8 DUP (0ffffffffffffffffh)
-;
 zeroQ			DQ				0
-; maskHex100		DD				0100h
+
 ;		Return codes commonly used.	
 retcode_zero	EQU				0
 retcode_one		EQU				1
@@ -158,7 +157,7 @@ ret_neg_one		DD				retcode_neg_one
 ;		Masks commonly used
 ;		Record form, whic can be used as immediate values
 kMask			RECORD			b8:1, b7:1, b6:1, b5:1, b4:1, b3:1, b2:1, b1:1, b0:1
-;		And as memory, for when immediately simply wont do
+;		And as memory, for when immediate simply wont do
 mskB0			DB				1
 mskB1			DB				2
 mskB2			DB				4
@@ -197,7 +196,7 @@ mskAll8			DB				255
 ;	Only a few macros are included, and are reformatted to match coding style:
 ;	indents and capitalization.
 ;
-; LEAF_ENTRY <Name>, <Section>, <NoPad>
+; LEAF_ENTRY <Name>, <Section>
 ;
 ; Macro Description:
 ;
@@ -218,11 +217,6 @@ mskAll8			DB				255
 ;
 ;   Section - Supplies the name of the section within which the function
 ;             is to appear
-;
-;   NoPad - If present, indicates that the function should not be prefixed
-;           with 6 bytes of padding.  This is for internal use only - the
-;           calling standard dictates that functions (nested and leaf) must
-;           be prefixed with padding.
 ;
 Leaf_Entry		MACRO			Name, Section
 Section			SEGMENT			PARA 'CODE'

@@ -69,7 +69,7 @@ ENDIF			; legal notes
 				INCLUDE			ui512aMacros.inc
 				OPTION			casemap:none
 
-ui512D			SEGMENT			'DATA'	ALIGN (64)					; Declare a data segment	
+ui512D			SEGMENT			'DATA'	ALIGN (64)					; Declare a data segment, aligned	
 				MemConstants										; Generate memory resident constants
 ui512D			ENDS												; end of data segment
 
@@ -110,15 +110,16 @@ ui512D			ENDS												; end of data segment
 ;			returns		-	nothing
 ;
 				Leaf_Entry		set_uT64, ui512						; Declare code section, public proc, no prolog, no frame, exceptions handled by caller
+				CheckAlign		RCX									; (OUT) destination array to be set
 
 	IF __UseZ
-				KMOVB			k1, mskB7
+				KMOVB			k1, mskB7							; Mask for least significant word (Note: ZMM regs store least first, while mem stores least last. Beware.)
 				VPBROADCASTQ 	ZMM31 {k1}{z}, RDX					; load parameter, zeroing all other qwords
 				VMOVDQA64		ZM_PTR [ RCX ], ZMM31				; store at destination
 
 	ELSE
-				Zero512			RCX	
-				MOV				Q_PTR [ RCX ] [ 7 * 8 ], RDX
+				Zero512			RCX									; Zero destination array	
+				MOV				Q_PTR [ RCX ] [ 7 * 8 ], RDX		; Move given 64 bit qwored to least significant qword of array
 
 	ENDIF
 				RET	
@@ -134,8 +135,8 @@ ui512D			ENDS												; end of data segment
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 ;
 				Leaf_Entry		compare_u, ui512					; Declare code section, public proc, no prolog, no frame, exceptions handled by caller
-				CheckAlign		RCX
-				CheckAlign		RDX
+				CheckAlign		RCX									; (IN) left hand (LH) operand to compare
+				CheckAlign		RDX									; (IN) right hand (RH) operand in the compare 
 
 	IF __UseZ
 				VMOVDQA64		ZMM30, ZM_PTR [ RCX ]				; Load parameters
@@ -156,7 +157,7 @@ ui512D			ENDS												; end of data segment
 				BSF				EAX, EAX
 		ENDIF
 				CMP				R8D, EAX							; compare: which is most significant? LT or GT? (or zero - equal)
-				LEA				EAX, [ 0 ]
+				LEA				EAX, [ retcode_zero ]
 				CMOVA			EAX, ret_one
 				CMOVB			EAX, ret_neg_one
 				RET
@@ -231,7 +232,7 @@ ui512D			ENDS												; end of data segment
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 ;
 				Leaf_Entry		compare_uT64, ui512					; Declare code section, public proc, no prolog, no frame, exceptions handled by caller				
-				CheckAlign		RCX
+				CheckAlign		RCX									; (IN) left hand (LH) operand to compare 
 
 	IF		__UseZ
 				VMOVDQA64		ZMM30, ZM_PTR [ RCX ]				; Load lh-op parameter
@@ -288,9 +289,9 @@ ui512D			ENDS												; end of data segment
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 ;
 				Leaf_Entry		add_u, ui512						; Declare code section, public proc, no prolog, no frame, exceptions handled by caller
-				CheckAlign		RCX
-				CheckAlign		RDX
-				CheckAlign		R8	
+				CheckAlign		RCX									; (OUT) 8 QWORD sum
+				CheckAlign		RDX									; (IN) 8 QWORD LH addend
+				CheckAlign		R8									; (IN) 8 QWORD RH addend
 
      IF __UseZ
 ; Load operands
@@ -308,12 +309,12 @@ ui512D			ENDS												; end of data segment
 
 ; Carry propagation (loop until done) Note: tried unrolled here, but code size, hence instruction pipeline fetch, slower than tight loop
 @@:
-                KANDNB			k2, k7, k1							; eliminate apparent carries if they had already been flagged (and processed) (AND NOT previous K7)
-                KORB			k7, k7, k2							; new carries in K2, OR into carries done (K7)
+                KANDNB			k2, k7, k1							; eliminate apparent carries if they had already been flagged (and processed) (by AND NOT previous K7)
+                KORB			k7, k7, k2							; new carries in K2, OR into carries already done (K7)
                 KSHIFTRB		k3, k2, 1							; new carries shift right to align which lane to add carry to
                 KTESTB			k3, k3								; no new carries? exit
                 JZ				@@saveexit
-                VPBROADCASTQ	ZMM28 {k3}{z}, R9					; in scatch reg, zero lane, load shifted carry lanes with '1'
+                VPBROADCASTQ	ZMM28 {k3}{z}, R9					; in scatch reg, zero lanes, load shifted carry lanes with '1'
                 VPADDQ			ZMM29 {k3}, ZMM29, ZMM28			; add in the carries
                 VPCMPUQ			k1 {k3}, ZMM29, ZMM28, CPLT			; compare result, lane by lane, to see if less than orginal (indicating an overflow / carry)
 				JMP				@B									; check for additional (newly generated) carries
@@ -321,7 +322,7 @@ ui512D			ENDS												; end of data segment
 ; Complete, extract carry out (overflow) for return code, store result sum at callers sum
 @@saveexit:
                 KMOVB			RAX, k7								; Move final carries done to RAX
-                AND				RAX, 1								; bit 0 (MSB carry-out)
+                AND				RAX, retcode_one					; bit 0 (MSB carry-out)
                 VMOVDQA64		ZM_PTR [ RCX ], ZMM29				; Store sum
                 RET
 
@@ -334,7 +335,7 @@ ui512D			ENDS												; end of data segment
 ; FOR EACH index of 6 thru 0 : fetch qword of addend1 (RDX), add (with carry) to qword of addend2; store at callers sum			
 				FOR				idx, < 6, 5, 4, 3, 2, 1, 0 >
 				MOV				RAX, Q_PTR [ RDX ] [ idx * 8 ]
-				ADCX			RAX, Q_PTR [ R8 ] [ idx * 8 ]
+				ADCX			RAX, Q_PTR [ R8 ] [ idx * 8 ]		; Note: some CPUs dont support ADCX (64bit unsigned add) An Add with checking sign change could be used
 				MOV				Q_PTR [ RCX ] [ idx * 8 ] , RAX
 				ENDM
 
@@ -357,8 +358,8 @@ ui512D			ENDS												; end of data segment
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 ;
 				Leaf_Entry		add_uT64, ui512						; Declare code section, public proc, no prolog, no frame, exceptions handled by caller
-				CheckAlign		RCX
-				CheckAlign		RDX
+				CheckAlign		RCX									; (OUT) 8 QWORD sum
+				CheckAlign		RDX									; (IN) 8 QWORD LH addend
 
 	IF __UseZ
 ; Load operands				
@@ -403,7 +404,7 @@ ui512D			ENDS												; end of data segment
 ; FOR EACH index 6 thru 0: Get addend QWORD, add zero, but with carry if any from previous add
 				FOR				idx, < 6, 5, 4, 3, 2, 1, 0 >
 				MOV				RAX, Q_PTR [ RDX ] [ idx * 8 ]
-				ADCX			RAX, zeroQ
+				ADCX			RAX, zeroQ							; Note: some CPUs dont support ADCX (64bit unsigned add) An Add with checking sign change could be used
 				MOV				Q_PTR [ RCX ] [ idx * 8 ], RAX
 				ENDM
 
@@ -425,9 +426,9 @@ ui512D			ENDS												; end of data segment
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 ;
 				Leaf_Entry		sub_u, ui512						; Declare code section, public proc, no prolog, no frame, exceptions handled by caller
-				CheckAlign		RCX
-				CheckAlign		RDX
-				CheckAlign		R8
+				CheckAlign		RCX									; (OUT) 8 QWORD difference
+				CheckAlign		RDX									; (IN) 8 QWORD left hand operand, minuend
+				CheckAlign		R8									; (IN) 8 QWORD right hand operand, subtrahend
 
 	IF __UseZ
 ; Load operands
@@ -437,7 +438,6 @@ ui512D			ENDS												; end of data segment
 ; Initialize loop variables: R9 for the targeted in-lane subtract of borrows; RAX for return code overall borrow flag
 				XOR				R9, R9
 				INC				R9
-				XOR				RAX, RAX
 				KXORB			k7, k7, k7							; Clear k7 (what borrows have been done mask)
 
 ; Initial subtraction
@@ -493,8 +493,8 @@ ui512D			ENDS												; end of data segment
 ;			Note: unrolled code instead of loop: faster, and no regs to save / setup / restore
 ;
 				Leaf_Entry		sub_uT64, ui512						; Declare code section, public proc, no prolog, no frame, exceptions handled by caller
-				CheckAlign		RCX
-				CheckAlign		RDX
+				CheckAlign		RCX									; (OUT) 8 QWORD difference
+				CheckAlign		RDX									; (IN) 8 QWORD left hand operand, minuend
 
 	IF __UseZ
 ; Load operands
@@ -505,7 +505,6 @@ ui512D			ENDS												; end of data segment
 ; Initialize loop variables: R9 for the targeted in-lane subtract of borrows; RAX for return code overall borrow flag
 				XOR				R9, R9
 				INC				R9
-				XOR				RAX, RAX
 				KXORB			k7, k7, k7							; Clear k7 (what borrows have been done mask)
 
 ; Initial subtraction
