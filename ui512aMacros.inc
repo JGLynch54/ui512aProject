@@ -155,7 +155,7 @@ ret_one			DD				retcode_one
 ret_neg_one		DD				retcode_neg_one
 
 ;		Masks commonly used
-;		Record form, whic can be used as immediate values
+;		Record form, which can be used as immediate values. Example: OR	R8D, MASK kMask.b8
 kMask			RECORD			b8:1, b7:1, b6:1, b5:1, b4:1, b3:1, b2:1, b1:1, b0:1
 ;		And as memory, for when immediate simply wont do
 mskB0			DB				1

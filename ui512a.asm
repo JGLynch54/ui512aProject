@@ -171,7 +171,7 @@ ui512D			ENDS												; end of data segment
 				KMOVB			EAX, k2								; GT compare result to EAX
 				OR				R8D, MASK kMask.b8					; OR in a high bit to make an equal compare not zero
 				OR				EAX, MASK kMask.b8
-				SHL				R8D, 1								; shift so zero bit is one bit (so it doesnt get lost in BSF)
+				SHL				R8D, 1								; shift so zero bit is one bit 
 				SHL				EAX, 1
 		IF __UseBMI2
 				TZCNT			R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
@@ -190,7 +190,7 @@ ui512D			ENDS												; end of data segment
 				KMOVB			EAX, k2
 				OR				R8D, MASK kMask.b8					; OR in a high bit to make an equal compare not zero	
 				OR				EAX, MASK kMask.b8
-				SHL				R8D, 1								; shift so zero bit is one bit (so it doesnt get lost in BSR)
+				SHL				R8D, 1								; shift so zero bit is one bit
 				SHL				EAX, 1
 		IF __UseBMI2
 				TZCNT			R8D, R8D							; get bit number of right-most (most significant) 1 thru 8
@@ -261,7 +261,7 @@ ui512D			ENDS												; end of data segment
 
 	ELSE
 				XOR				RAX, RAX
-; FOR EACH index 0 thru 6: Get minuend QWORD, compare for zero 
+; FOR EACH index 0 thru 6: Get QWORD, compare for zero 
 				FOR				idx, < 0, 1, 2, 3, 4, 5, 6 >
 				CMP				Q_PTR [ RCX ] [ idx * 8 ], RAX
 				JNZ				@F
@@ -271,8 +271,8 @@ ui512D			ENDS												; end of data segment
 				CMP				RAX, RDX 
 				JNZ				@F
 				XOR				EAX, EAX
-@@:				CMOVA			EAX, ret_one					; 'above' is greater than for an unsigned integer
-				CMOVB			EAX, ret_neg_one				; 'below' is less than for an unsigned integer
+@@:				CMOVA			EAX, ret_one						; 'above' is greater than for an unsigned integer
+				CMOVB			EAX, ret_neg_one					; 'below' is less than for an unsigned integer
 				RET
 
 	ENDIF
@@ -475,7 +475,7 @@ ui512D			ENDS												; end of data segment
 				MOV				[ RCX ] [ idx * 8 ], RAX
 				ENDM
 
-				LEA				RAX, [ retcode_zero ]								; return, set return code to zero if no remaining borrow, to one if there is a borrow
+				LEA				RAX, [ retcode_zero ]				; return, set return code to zero if no remaining borrow, to one if there is a borrow
 				CMOVC			EAX, ret_one
 				RET
 

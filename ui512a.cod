@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler (x64) Version 14.44.35214.0   08/17/25 13:40:00
+Microsoft (R) Macro Assembler (x64) Version 14.44.35214.0   08/18/25 21:47:30
 ui512a.asm						     Page 1 - 1
 
 
@@ -187,7 +187,7 @@ ui512a.asm						     Page 1 - 1
 			      C ret_neg_one		DD				retcode_neg_one
 			      C 
 			      C ;		Masks commonly used
-			      C ;		Record form, whic can be used as immediate values
+			      C ;		Record form, which can be used as immediate values. Example: OR	R8D, MASK kMask.b8
 			      C kMask			RECORD			b8:1, b7:1, b6:1, b5:1, b4:1, b3:1, b2:1, b1:1, b0:1
 			      C ;		And as memory, for when immediate simply wont do
 			      C mskB0			DB				1
@@ -929,7 +929,7 @@ ui512a.asm						     Page 1 - 1
  00000323		     1	ui512			ENDS
 
 					END
-Microsoft (R) Macro Assembler (x64) Version 14.44.35214.0   08/17/25 13:40:00
+Microsoft (R) Macro Assembler (x64) Version 14.44.35214.0   08/18/25 21:47:30
 ui512a.asm						     Symbols 2 - 1
 
 
