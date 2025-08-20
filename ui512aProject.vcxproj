@@ -24,6 +24,7 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </MASM>
     <None Include="compile_time_options.inc" />
+    <None Include="legalnotes.inc" />
     <None Include="ReadMe.md" />
     <None Include="ui512aMacros.inc" />
   </ItemGroup>

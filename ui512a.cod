@@ -1,10 +1,7 @@
-Microsoft (R) Macro Assembler (x64) Version 14.44.35214.0   08/18/25 21:47:30
+Microsoft (R) Macro Assembler (x64) Version 14.44.35214.0   08/20/25 15:30:00
 ui512a.asm						     Page 1 - 1
 
 
-				IFNDEF		legalnotes
- = 00000001			legalnotes	EQU		1
-				.LIST
 				;
 				;			ui512a
 				;
@@ -14,69 +11,100 @@ ui512a.asm						     Page 1 - 1
 				;			Author:			John G. Lynch
 				;			Legal:			Copyright @2024, per MIT License below
 				;			Date:			May 13, 2024
-				;
-				;			Notes:
-				;				ui512 is a small project to provide basic operations for a variable type of unsigned 512 bit integer.
-				;
-				;				ui512a provides basic operations: zero, copy, compare, add, subtract.
-				;				ui512b provides basic bit-oriented operations: shift left, shift right, and, or, not, least significant bit and most significant bit.
-				;               ui512md provides multiply and divide.
-				;
-				;				It is written in assembly language, using the MASM (ml64) assembler provided as an option within Visual Studio.
-				;				(currently using VS Community 2022 17.14.10)
-				;
-				;				It provides external signatures that allow linkage to C and C++ programs,
-				;				where a shell/wrapper could encapsulate the methods as part of an object.
-				;
-				;				It has assembly time options directing the use of Intel processor extensions: AVX4, AVX2, SIMD, or none:
-				;				(Z (512), Y (256), X (128) registers, or regular Q (64bit)).
-				;
-				;				Note: The file "compile_time_options.inc" contains the options that can be configured for extension usage, and other options.
-				;
-				;				If processor extensions are used, the caller must align the variables declared and passed
-				;				on the appropriate byte boundary (e.g. alignas 64 for 512)
-				;
-				;				This module is very light-weight (less than 1K bytes) and relatively fast,
-				;				but is not intended for all processor types or all environments. 
-				;
-				;				Use for private (hobbyist), or instructional, or as an example for more ambitious projects.
-				;
-				;--------------------------------------------------------------------------------------------------------------------------------------------------------------
-				;
-				;			MIT License
-				;
-				;			Copyright (c) 2024 John G. Lynch
-				;
-				;				Permission is hereby granted, free of charge, to any person obtaining a copy
-				;				of this software and associated documentation files (the "Software"), to deal
-				;				in the Software without restriction, including without limitation the rights
-				;				to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-				;				copies of the Software, and to permit persons to whom the Software is
-				;				furnished to do so, subject to the following conditions:
-				;
-				;				The above copyright notice and this permission notice shall be included in all
-				;				copies or substantial portions of the Software.
-				;
-				;				THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-				;				IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-				;				FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-				;				AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-				;				LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-				;				OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-				;				SOFTWARE.
-				;
-				;
-				;--------------------------------------------------------------------------------------------------------------------------------------------------------------
-				ENDIF			; legal notes
 
-								INCLUDE			compile_time_options.inc
+								INCLUDE			legalnotes.inc
+			      C 
 			      C IFNDEF		legalnotes
+ = 00000001		      C legalnotes	EQU		1
+			      C .LIST
+			      C ;			legalnotes
+			      C ;
+			      C ;			File:			legalnotes.inc
+			      C ;			Author:			John G. Lynch
+			      C ;			Legal:			Copyright @2024, per MIT License below
+			      C ;			Date:			August 20, 2025
+			      C ;
+			      C ;
+			      C ;			Notes:
+			      C ;				ui512 is a small project to provide basic operations for a variable type of unsigned 512 bit integer.
+			      C ;
+			      C ;				ui512a provides basic operations: zero, copy, compare, add, subtract.
+			      C ;				ui512b provides basic bit-oriented operations: shift left, shift right, and, or, not, least significant bit and most significant bit.
+			      C ;               ui512md provides multiply and divide.
+			      C ;
+			      C ;				It is written in assembly language, using the MASM (ml64) assembler provided as an option within Visual Studio.
+			      C ;				(currently using VS Community 2022 17.14.10)
+			      C ;
+			      C ;				It provides external signatures that allow linkage to C and C++ programs,
+			      C ;				where a shell/wrapper could encapsulate the methods as part of an object.
+			      C ;
+			      C ;				It has assembly time options directing the use of Intel processor extensions: AVX4, AVX2, SIMD, or none:
+			      C ;				(Z (512), Y (256), or X (128) registers, or regular Q (64bit)).
+			      C ;
+			      C ;				Note: The file "compile_time_options.inc" contains the options that can be configured for extension usage, and other options.
+			      C ;
+			      C ;				If processor extensions are used, the caller must align the variables declared and passed
+			      C ;				on the appropriate byte boundary (e.g. alignas 64 for 512)
+			      C ;
+			      C ;				This module is very light-weight (less than 2K bytes) and relatively fast,
+			      C ;				but is not intended for all processor types or all environments. 
+			      C ;
+			      C ;				Use for private (hobbyist), or instructional, or as an example for more ambitious projects
+			      C ;
+			      C ;--------------------------------------------------------------------------------------------------------------------------------------------------------------
+			      C ;
+			      C ;			MIT License
+			      C ;
+			      C ;			Copyright (c) 2024 John G. Lynch
+			      C ;
+			      C ;				Permission is hereby granted, free of charge, to any person obtaining a copy
+			      C ;				of this software and associated documentation files (the "Software"), to deal
+			      C ;				in the Software without restriction, including without limitation the rights
+			      C ;				to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+			      C ;				copies of the Software, and to permit persons to whom the Software is
+			      C ;				furnished to do so, subject to the following conditions:
+			      C ;
+			      C ;				The above copyright notice and this permission notice shall be included in all
+			      C ;				copies or substantial portions of the Software.
+			      C ;
+			      C ;				THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+			      C ;				IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+			      C ;				FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+			      C ;				AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+			      C ;				LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+			      C ;				OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+			      C ;				SOFTWARE.
+			      C ;
 			      C ENDIF			; legalnotes
 			      C 
+								INCLUDE			compile_time_options.inc
+			      C ;			compile_time_options
+			      C ;
+			      C ;			File:			compile_time_options.inc
+			      C ;			Author:			John G. Lynch
+			      C ;			Legal:			Copyright @2024, per MIT License included
+			      C ;			Date:			August 20, 2025
+			      C ;
+			      C ;
 			      C IFNDEF							compile_time_options_INC
  = 1			      C compile_time_options_INC		EQU			<1>
 			      C 
+			      C 				INCLUDE			legalnotes.inc
+			      C 
+			      C IFNDEF		legalnotes
+			      C ENDIF			; legalnotes
+			      C 
+			      C 
 			      C ;			Configuration choices
+			      C ;
+			      C ;	Note: Choosing these options requires knowledge of the target machine CPU model. If you are unsure of the capabiites of the target machine CPU,
+			      C ;	You can use the "CPU-Z" tool. https://www.cpuid.com/downloads/cpu-z/cpu-z_2.09-en.exe 
+			      C ;	Basically, Intel Skylake and later can use "Z", Haswell and later can use BMI2, etc. 
+			      C ;	Too many processors, options, vendors for me to list here. Go to the CPU vendor specifications, or use the tool to inform your choice.
+			      C ;
+			      C ;	Note: This is intended to be a mutually exclusive choice (UseZ thru UseQ).
+			      C ;	However, the coding of the options selects the "highest" one used and ignores the rest ( If __UseZ ... ELSEIF __UseY ... )
+			      C 
  = 00000001		      C __UseZ			EQU				1									; Use AVX4 processor features (512 bit registers and instructions)
  = 00000000		      C __UseY			EQU				0									; Use AVX2 processor features (256 bit registers and instructions)
  = 00000000		      C __UseX			EQU				0									; Use SIMD/SSE processor features (128 bit registers and instructions)
@@ -91,11 +119,22 @@ ui512a.asm						     Page 1 - 1
 			      C ENDIF			; compile_time_options_INC
 			      C 
 								INCLUDE			ui512aMacros.inc
-			      C IFNDEF		legalnotes
-			      C ENDIF			; legalnotes
+			      C ;
+			      C ;			ui512aMacros
+			      C ;
+			      C ;			File:			ui512aMacros.inc
+			      C ;			Author:			John G. Lynch
+			      C ;			Legal:			Copyright @2024, per MIT License below
+			      C ;			Date:			May 13, 2024
+			      C ;
 			      C 
 			      C IFNDEF			ui512aMacros_INC
  = 1			      C ui512aMacros_INC EQU			<1>
+			      C 
+			      C 				INCLUDE			legalnotes.inc
+			      C 
+			      C IFNDEF		legalnotes
+			      C ENDIF			; legalnotes
 			      C 
 			      C 
 			      C ;           header file equivalent extern declarations
@@ -420,7 +459,7 @@ ui512a.asm						     Page 1 - 1
 			      C 
 			      C 				ENDM
 			      C 
-			      C ENDIF	; IFNDEF			ui512aMacros_INC
+			      C ENDIF	; ui512aMacros_INC
 			      C 
 								OPTION			casemap:none
 
@@ -929,7 +968,7 @@ ui512a.asm						     Page 1 - 1
  00000323		     1	ui512			ENDS
 
 					END
-Microsoft (R) Macro Assembler (x64) Version 14.44.35214.0   08/18/25 21:47:30
+Microsoft (R) Macro Assembler (x64) Version 14.44.35214.0   08/20/25 15:30:00
 ui512a.asm						     Symbols 2 - 1
 
 
